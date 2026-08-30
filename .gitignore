@@ -1,0 +1,27 @@
+# .NET
+**/bin/
+**/obj/
+TestResults/
+*.trx
+coverage/
+
+# Node and Vite
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Local data and secrets
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+
+# IDE and operating system
+.vs/
+.vscode/
+.idea/
+.DS_Store

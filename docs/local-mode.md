@@ -2,6 +2,31 @@
 
 Local mode provides a self-contained personal installation using SQLite.
 
+## Configuration and startup
+
+SQLite is the default profile. Its default database is
+`src/Knowledge.Server/data/knowledge.db`, which is excluded from version control. Start it with:
+
+```bash
+dotnet run --project src/Knowledge.Server --urls http://localhost:5080
+```
+
+Override settings with standard ASP.NET Core configuration, for example
+`Persistence__SqliteConnectionString`. Local mode enables SQLite foreign keys, connection pooling,
+and a 30-second busy timeout. It remains a single-process profile.
+
+For PostgreSQL development:
+
+```bash
+docker compose up --detach --wait postgres
+Persistence__Provider=PostgreSql \
+Persistence__PostgreSqlConnectionString='Host=localhost;Port=54329;Database=knowledge_test;Username=knowledge;Password=knowledge-dev-only' \
+dotnet run --project src/Knowledge.Server --urls http://localhost:5080
+```
+
+The Compose credentials are development-only defaults and can be overridden through the variables
+shown in `.env.example`.
+
 ## Intended experience
 
 - Start one application process without requiring PostgreSQL or Docker.
@@ -39,4 +64,3 @@ would require change tracking, identity and authorization rules, deletion semant
 resolution, and encrypted transport. That work is outside the initial local profile.
 
 See [ADR-0002](adr/0002-postgresql-server-and-sqlite-local-profiles.md).
-

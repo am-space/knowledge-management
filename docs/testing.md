@@ -1,8 +1,16 @@
 # Testing and verification
 
-No executable application or automated test suite exists yet. Once code is scaffolded, the
-repository will provide `scripts/setup.sh` and `scripts/verify.sh` as the canonical local and CI
-entry points.
+`scripts/setup.sh` and `scripts/verify.sh` are the canonical local and CI entry points. The full
+verification builds the server, runs unit and SQLite/PostgreSQL integration tests, then lints,
+type-checks, tests, and builds the frontend.
+
+```bash
+scripts/setup.sh
+scripts/verify.sh --all
+```
+
+Focused modes are `--backend`, `--frontend`, and `--integration`. Integration verification starts
+the Compose PostgreSQL service unless `KNOWLEDGE_TEST_POSTGRES` supplies an isolated test database.
 
 ## Test topology
 
@@ -17,8 +25,8 @@ tests/
 - **Unit:** domain behavior and focused application services, organized by module.
 - **Integration:** relational providers, HTTP, MCP, authentication, background work, and
   cross-workspace isolation.
-- **Architecture:** dependency direction and module boundaries worth enforcing mechanically.
-- **E2E:** critical human and agent workflows through real application entry points.
+- **Architecture:** reserved until executable dependency rules exist.
+- **E2E:** reserved until critical product workflows exist.
 
 Frontend component and hook tests should normally live beside their React source. Browser E2E tests
 remain in the top-level E2E project or suite.
@@ -38,4 +46,3 @@ remain in the top-level E2E project or suite.
 
 Run focused checks while iterating and the full repository verification before delivery. Never
 report an unavailable, skipped, or sandbox-blocked check as passed.
-
