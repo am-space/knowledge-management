@@ -21,6 +21,16 @@ material.
 
 Start new decisions from [`adr/template.md`](adr/template.md).
 
+## Active plans
+
+- [`milestone-0-foundation-plan.md`](milestone-0-foundation-plan.md) — executable application,
+  verification, and persistence foundation
+
+## Backlog plans
+
+- [`knowledge-core-mvp-plan.md`](backlog/knowledge-core-mvp-plan.md) — roadmap from executable
+  foundation through the local and hosted Knowledge Core MVP
+
 ## Plans and history
 
 - [`backlog/`](backlog/README.md) contains potential work without an implementation commitment.
@@ -28,4 +38,3 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 - The root [`knowledge-management-system-design.md`](../knowledge-management-system-design.md) is the
   original design proposal. Accepted ADRs and the living reference documents above take precedence
   if the proposal becomes outdated.
-
