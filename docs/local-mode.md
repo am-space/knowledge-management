@@ -1,0 +1,42 @@
+# Local mode
+
+Local mode provides a self-contained personal installation using SQLite.
+
+## Intended experience
+
+- Start one application process without requiring PostgreSQL or Docker.
+- Store knowledge in one configurable SQLite database file.
+- Automatically create or select a personal workspace.
+- Expose the same web, HTTP, and MCP behavior available in server mode where supported.
+- Allow explicit export and import for backup and portability.
+
+## Preserved semantics
+
+Local mode retains users where authentication requires them, workspaces, memberships, stable
+knowledge-node IDs, immutable revisions, structured relations, and workspace IDs. It must not use a
+simplified local-only domain model.
+
+## Search capabilities
+
+SQLite FTS5 provides local keyword search. Recursive CTEs provide hierarchy traversal. Graph
+relations use ordinary indexed relational tables.
+
+Local vector search is not part of the accepted initial profile. The application must expose search
+capabilities explicitly so callers can omit semantic similarity when it is unavailable. A local
+vector extension or in-process index requires a later decision and representative benchmarks.
+
+## Operational limits
+
+- Local mode is intended for one running application instance.
+- It does not promise PostgreSQL-equivalent concurrent-write behavior or multi-user isolation.
+- The database file and any backups contain user knowledge and must be protected accordingly.
+- Background work must remain retryable and idempotent even when executed in the same process.
+
+## Not synchronization
+
+A local database is not an offline replica of a hosted workspace. Bidirectional synchronization
+would require change tracking, identity and authorization rules, deletion semantics, conflict
+resolution, and encrypted transport. That work is outside the initial local profile.
+
+See [ADR-0002](adr/0002-postgresql-server-and-sqlite-local-profiles.md).
+
