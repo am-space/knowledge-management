@@ -64,3 +64,5 @@ scripts/               Canonical setup and verification entry points
 Start with the [documentation index](docs/README.md). The original
 [system design](knowledge-management-system-design.md) remains useful background; accepted ADRs and
 living reference documentation take precedence when they differ from that initial proposal.
+Development work follows the documented [GitHub Issue lifecycle](docs/work-tracking.md), which keeps
+delivery status in GitHub and durable plans and decisions in the repository.

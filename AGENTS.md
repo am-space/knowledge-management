@@ -63,6 +63,8 @@ Do not create empty architectural layers merely to match a diagram. Add module-i
 
 ## Git workflow
 
+- Follow [`docs/work-tracking.md`](docs/work-tracking.md) for the GitHub Issue lifecycle and the
+  boundary between issues, plans, ADRs, living references, and pull requests.
 - Never commit feature work directly to `master`.
 - Before the first task commit, create or switch to a dedicated branch. Unless the user specifies a
   name, use `feature/<short-description>` for enhancements and `fix/<short-description>` for bugs.
@@ -189,10 +191,13 @@ Documentation under `docs/` is divided into living reference pages, accepted ADR
 active plans, and archived plans. Follow [`docs/AGENTS.md`](docs/AGENTS.md) for lifecycle mechanics.
 
 - Update `docs/README.md` when documentation is added, moved, renamed, or removed.
+- Prefer Mermaid for useful architecture, relationship, sequence, and lifecycle diagrams when it
+  can express the content clearly; follow the diagram rules in `docs/AGENTS.md`.
 - Record a durable accepted decision in the next numbered ADR using `docs/adr/template.md`.
 - Do not rewrite an accepted ADR to match a later decision; supersede it with a new ADR.
-- Keep potential work in `docs/backlog/`, approved or active plans directly in `docs/`, and completed
-  plans in `docs/archive/`.
+- Track actionable work and delivery status in GitHub Issues. Keep shaped, multi-issue potential
+  work in `docs/backlog/`, approved or active plans directly in `docs/`, and completed plans in
+  `docs/archive/`.
 
 ## Testing and validation
 
