@@ -39,11 +39,15 @@ public sealed class PersistenceOptions : IValidatableObject
         var selectedConnectionString = provider == PersistenceProvider.Sqlite
             ? SqliteConnectionString
             : PostgreSqlConnectionString;
+        var connectionStringMember = provider == PersistenceProvider.Sqlite
+            ? nameof(SqliteConnectionString)
+            : nameof(PostgreSqlConnectionString);
 
         if (string.IsNullOrWhiteSpace(selectedConnectionString))
         {
             return [new ValidationResult(
-                $"A connection string is required for persistence provider {provider}.")];
+                $"A connection string is required for persistence provider {provider}.",
+                [connectionStringMember])];
         }
 
         return [];

@@ -39,5 +39,6 @@ public sealed class PersistenceOptionsTests
 
         Assert.Single(results);
         Assert.Contains("connection string is required", results[0].ErrorMessage);
+        Assert.Equal([nameof(PersistenceOptions.PostgreSqlConnectionString)], results[0].MemberNames);
     }
 }

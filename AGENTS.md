@@ -199,7 +199,7 @@ active plans, and archived plans. Follow [`docs/AGENTS.md`](docs/AGENTS.md) for 
 Use `scripts/setup.sh` to restore/install dependencies and `scripts/verify.sh --all` for canonical
 full verification. The verification workflow covers:
 
-- backend restore, build, formatting or static analysis, and tests;
+- backend restore, build, compiler analysis, and tests;
 - frontend dependency installation, lint, type-check, tests, and production build;
 - database migration validation;
 - focused integration tests for PostgreSQL and SQLite behavior;
