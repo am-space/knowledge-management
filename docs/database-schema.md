@@ -74,8 +74,12 @@ CreatedAt
 CreatedBy
 ```
 
-Revisions are immutable. `(NodeId, Version)` must be unique and the current-revision pointer must be
-updated transactionally. Concurrent update semantics must be specified before implementation.
+Revisions are immutable. `Version` is a positive integer beginning at 1 and increasing by exactly
+one for each node. `(NodeId, Version)` must be unique. An update supplies the expected current
+version; inserting the next revision and conditionally moving the current-revision pointer occur in
+one transaction. A conflict or other rejected update commits neither change. See
+[Knowledge application and HTTP contracts](knowledge-contracts.md) and
+[ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
 
 ### KnowledgeRelation
 
@@ -111,4 +115,3 @@ or cross-workspace results.
 
 Database constraints and indexes must reinforce domain invariants on both providers. PostgreSQL must
 not be reduced to SQLite's lowest common denominator.
-
