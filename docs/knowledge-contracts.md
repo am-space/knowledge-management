@@ -100,7 +100,7 @@ future MCP adapters.
 
 Failures use `application/problem+json` and RFC 9457 Problem Details. Each response includes
 `type`, `title`, `status`, and `traceId`. Validation responses additionally include an `errors`
-object keyed by camel-case request field. Problem `type` values are stable URNs:
+object keyed by camel case request field names. Problem `type` values are stable URNs:
 
 | Application result or HTTP failure | Status | Problem `type` |
 | --- | --- | --- |
