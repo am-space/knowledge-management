@@ -35,6 +35,19 @@ shown in `.env.example`.
 - Expose the same web, HTTP, and MCP behavior available in server mode where supported.
 - Allow explicit export and import for backup and portability.
 
+## Local identity and workspace resolution
+
+Startup idempotently provisions one configured local owner, an owner membership, and one personal
+workspace. The trusted local host resolves requests to those identities before invoking application
+behavior. Client-supplied route values, headers, query parameters, request bodies, database paths,
+or IDs cannot override the active workspace.
+
+Knowledge persistence remains explicitly filtered by the resolved workspace ID. This keeps the
+local shortcut at the host boundary and preserves the same application and persistence contract
+needed by the future authenticated server profile. See
+[Knowledge application and HTTP contracts](knowledge-contracts.md) and
+[ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
+
 ## Preserved semantics
 
 Local mode retains users where authentication requires them, workspaces, memberships, stable
