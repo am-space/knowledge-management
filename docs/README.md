@@ -12,6 +12,7 @@ material.
 | [`local-mode.md`](local-mode.md) | SQLite local profile, capabilities, and limitations |
 | [`frontend.md`](frontend.md) | React and Material UI client direction |
 | [`testing.md`](testing.md) | Planned test topology and verification policy |
+| [`work-tracking.md`](work-tracking.md) | GitHub Issue responsibilities, lifecycle, and relationship to repository plans |
 
 ## Architecture decision records
 
@@ -33,7 +34,8 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 
 ## Plans and history
 
-- [`backlog/`](backlog/README.md) contains potential work without an implementation commitment.
+- [`backlog/`](backlog/README.md) contains shaped multi-issue work without an implementation
+  commitment.
 - [`archive/`](archive/README.md) contains completed or superseded plans retained for context.
 - The root [`knowledge-management-system-design.md`](../knowledge-management-system-design.md) is the
   original design proposal. Accepted ADRs and the living reference documents above take precedence
