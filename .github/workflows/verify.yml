@@ -1,0 +1,77 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: src/Knowledge.Web/package-lock.json
+      - run: scripts/setup.sh
+      - run: scripts/verify.sh --backend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: backend-test-results
+          path: '**/TestResults/*.trx'
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: src/Knowledge.Web/package-lock.json
+      - run: npm ci --prefix src/Knowledge.Web
+      - run: scripts/verify.sh --frontend
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: knowledge
+          POSTGRES_PASSWORD: knowledge-ci-only
+          POSTGRES_DB: knowledge_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U knowledge -d knowledge_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      KNOWLEDGE_TEST_POSTGRES: Host=127.0.0.1;Port=5432;Database=knowledge_test;Username=knowledge;Password=knowledge-ci-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+      - run: dotnet restore Knowledge.sln
+      - run: scripts/verify.sh --integration
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-test-results
+          path: '**/TestResults/*.trx'

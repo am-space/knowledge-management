@@ -4,18 +4,26 @@ This file provides repository-wide guidance to Codex when working in this reposi
 
 ## Project status
 
-This repository is in its design and bootstrap stage. The base source, test, script, and documentation
-directories exist, but there is not yet an application, build, test, migration, or deployment
-workflow.
+This repository has an executable Milestone 0 foundation. It includes the ASP.NET Core server,
+React client, SQLite and PostgreSQL persistence profiles, focused tests, canonical scripts, and CI.
+Knowledge-domain behavior and the first database migrations begin in Milestone 1.
 
 Start with [`docs/README.md`](docs/README.md). Accepted decisions live in `docs/adr/`, and living
 reference pages describe the current direction. The root
 [`knowledge-management-system-design.md`](knowledge-management-system-design.md) is the initial
 proposal; accepted ADRs and current reference documentation take precedence if they differ from it.
 
-Do not claim that implementation commands or tests exist until they have been added. When the
-initial solution is scaffolded, update this file with the canonical setup, run, and verification
-commands in the same change.
+Canonical commands:
+
+```bash
+scripts/setup.sh
+dotnet run --project src/Knowledge.Server --urls http://localhost:5080
+npm run dev --prefix src/Knowledge.Web
+scripts/verify.sh --all
+```
+
+Focused verification is available through `scripts/verify.sh --backend`, `--frontend`, and
+`--integration`. PostgreSQL development uses `docker compose up --detach --wait postgres`.
 
 ## Product overview
 
@@ -47,7 +55,7 @@ tests/
   Knowledge.E2E.Tests/
 
 docs/                  Reference documentation, ADRs, plans, and history
-scripts/               Canonical setup and verification entry points once implemented
+scripts/               Canonical setup and verification entry points
 ```
 
 Do not create empty architectural layers merely to match a diagram. Add module-internal `Domain`,
@@ -188,16 +196,10 @@ active plans, and archived plans. Follow [`docs/AGENTS.md`](docs/AGENTS.md) for 
 
 ## Testing and validation
 
-Until executable projects and canonical scripts exist:
+Use `scripts/setup.sh` to restore/install dependencies and `scripts/verify.sh --all` for canonical
+full verification. The verification workflow covers:
 
-- inspect Markdown links and paths affected by documentation changes;
-- run `git diff --check` and inspect `git status --short` before handoff;
-- state clearly that no build or automated test suite exists yet.
-
-When scaffolding the application, establish one canonical setup script and one canonical verification
-script rather than duplicating CI logic. The eventual full verification should cover, as applicable:
-
-- backend restore, build, formatting or static analysis, and tests;
+- backend restore, build, compiler analysis, and tests;
 - frontend dependency installation, lint, type-check, tests, and production build;
 - database migration validation;
 - focused integration tests for PostgreSQL and SQLite behavior;
