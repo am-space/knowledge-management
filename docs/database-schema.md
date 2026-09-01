@@ -1,7 +1,7 @@
 # Conceptual database schema
 
-This document describes the provider-neutral relational model. It is not yet an EF Core mapping or
-migration specification.
+This document describes the provider-neutral relational model. The Milestone 1 identity, workspace,
+Article node, and revision subset is implemented through EF Core; later sections remain conceptual.
 
 ## Identity and tenancy
 
@@ -81,6 +81,12 @@ one transaction. A conflict or other rejected update commits neither change. See
 [Knowledge application and HTTP contracts](knowledge-contracts.md) and
 [ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
 
+`Source` is reserved for the later provenance contract and is not stored by the Milestone 1 schema.
+The implemented current-revision foreign key includes `(WorkspaceId, NodeId, Id)`, preventing a
+node from pointing at another node's revision. `CurrentRevisionId` is nullable only as a relational
+staging mechanism needed to insert the mutually referencing node and initial revision; persistence
+sets it within the same transaction before commit.
+
 ### KnowledgeRelation
 
 ```text
@@ -111,7 +117,7 @@ or cross-workspace results.
 | Keyword search | PostgreSQL full-text search | FTS5 |
 | Vector search | `pgvector` | Unavailable until explicitly implemented |
 | Tenant isolation | Application checks; possible future RLS | Application checks in a single-process profile |
-| Migrations | Provider-specific EF Core migrations | Provider-specific EF Core migrations |
+| Migrations | `PostgreSqlKnowledgeDbContext` history | `SqliteKnowledgeDbContext` history |
 
 Database constraints and indexes must reinforce domain invariants on both providers. PostgreSQL must
 not be reduced to SQLite's lowest common denominator.
