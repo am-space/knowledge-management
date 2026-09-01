@@ -16,17 +16,23 @@ public static class PersistenceServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddDbContext<KnowledgeDbContext>((serviceProvider, dbOptions) =>
+        services.AddDbContext<SqliteKnowledgeDbContext>((serviceProvider, dbOptions) =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value;
-            var provider = options.ParseProvider();
-            if (provider == PersistenceProvider.Sqlite)
-            {
-                dbOptions.UseSqlite(ResolveSqlitePath(options.SqliteConnectionString, contentRootPath));
-                return;
-            }
-
+            dbOptions.UseSqlite(
+                ResolveSqlitePath(options.SqliteConnectionString, contentRootPath));
+        });
+        services.AddDbContext<PostgreSqlKnowledgeDbContext>((serviceProvider, dbOptions) =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value;
             dbOptions.UseNpgsql(options.PostgreSqlConnectionString);
+        });
+        services.AddScoped<KnowledgeDbContext>(serviceProvider =>
+        {
+            var options = serviceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value;
+            return options.ParseProvider() == PersistenceProvider.Sqlite
+                ? serviceProvider.GetRequiredService<SqliteKnowledgeDbContext>()
+                : serviceProvider.GetRequiredService<PostgreSqlKnowledgeDbContext>();
         });
 
         return services;
