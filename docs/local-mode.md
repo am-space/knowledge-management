@@ -13,7 +13,9 @@ dotnet run --project src/Knowledge.Server --urls http://localhost:5080
 
 Override settings with standard ASP.NET Core configuration, for example
 `Persistence__SqliteConnectionString`. Local mode enables SQLite foreign keys, connection pooling,
-and a 30-second busy timeout. It remains a single-process profile.
+and a 30-second busy timeout. `LocalWorkspace__OwnerDisplayName` and
+`LocalWorkspace__WorkspaceName` customize the names created on first startup. They do not select or
+change the trusted identities. Local mode remains a single-process profile.
 
 For PostgreSQL development:
 
@@ -38,9 +40,15 @@ shown in `.env.example`.
 ## Local identity and workspace resolution
 
 Startup idempotently provisions one configured local owner, an owner membership, and one personal
-workspace. The trusted local host resolves requests to those identities before invoking application
-behavior. Client-supplied route values, headers, query parameters, request bodies, database paths,
-or IDs cannot override the active workspace.
+workspace in one transaction after applying SQLite migrations. The owner and workspace use stable
+application-defined IDs, so restarting resolves the same records without creating duplicates. A
+startup failure rolls back all provisioning and stops the host with an actionable log message.
+
+The trusted local host exposes the resolved owner and workspace through the application workspace
+context before invoking application behavior. Client-supplied route values, headers, query
+parameters, request bodies, database paths, or IDs cannot override the active workspace. The
+PostgreSQL profile does not register this initializer or local context; hosted identity will be
+provided by its authentication boundary.
 
 Knowledge persistence remains explicitly filtered by the resolved workspace ID. This keeps the
 local shortcut at the host boundary and preserves the same application and persistence contract

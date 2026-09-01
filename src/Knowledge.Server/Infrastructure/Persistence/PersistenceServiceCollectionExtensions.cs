@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Knowledge.Server.Workspaces.Features;
+using Knowledge.Server.Workspaces.Infrastructure;
 
 namespace Knowledge.Server.Infrastructure.Persistence;
 
@@ -34,6 +36,23 @@ public static class PersistenceServiceCollectionExtensions
                 ? serviceProvider.GetRequiredService<SqliteKnowledgeDbContext>()
                 : serviceProvider.GetRequiredService<PostgreSqlKnowledgeDbContext>();
         });
+
+        var persistenceOptions = configuration
+            .GetSection(PersistenceOptions.SectionName)
+            .Get<PersistenceOptions>() ?? new PersistenceOptions();
+        if (Enum.TryParse<PersistenceProvider>(
+                persistenceOptions.Provider,
+                ignoreCase: true,
+                out var provider) && provider == PersistenceProvider.Sqlite)
+        {
+            services.AddOptions<LocalWorkspaceOptions>()
+                .Bind(configuration.GetSection(LocalWorkspaceOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+            services.AddSingleton(TimeProvider.System);
+            services.AddScoped<IWorkspaceContext, LocalWorkspaceContext>();
+            services.AddHostedService<LocalWorkspaceInitializer>();
+        }
 
         return services;
     }
