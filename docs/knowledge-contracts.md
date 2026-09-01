@@ -65,6 +65,11 @@ The Article application boundary has these inputs and results:
 | Get | Trusted context, node ID | `Found` with the exact current Article revision | `NotFound` |
 | Update | Trusted context, node ID, `expectedRevisionVersion`, `title`, `contentMarkdown` | `Updated` with the new exact current revision | `ValidationFailed`, `NotFound`, `RevisionConflict` |
 
+These operations are implemented by the transport-independent `ArticleService`. Its result carries
+one of the statuses above, an Article on success, field errors for validation failure, or the
+current version for a revision conflict. HTTP and future MCP adapters map that result without
+reimplementing workspace, revision, or concurrency behavior.
+
 Titles and Markdown are required strings. A title containing only whitespace is invalid, and a
 title cannot exceed 500 characters after surrounding whitespace is removed. Unknown or unsupported
 node types are not treated as Articles.
