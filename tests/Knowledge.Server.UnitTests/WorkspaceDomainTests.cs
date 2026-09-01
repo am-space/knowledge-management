@@ -26,4 +26,23 @@ public sealed class WorkspaceDomainTests
             (MembershipRole)999,
             DateTimeOffset.UtcNow));
     }
+
+    [Fact]
+    public void User_RejectsDisplayNameOverMaximumLength()
+    {
+        Assert.Throws<ArgumentException>(() => new User(
+            Guid.NewGuid(),
+            new string('a', User.MaxDisplayNameLength + 1),
+            DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void Workspace_RejectsNameOverMaximumLength()
+    {
+        Assert.Throws<ArgumentException>(() => new Workspace(
+            Guid.NewGuid(),
+            new string('a', Workspace.MaxNameLength + 1),
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow));
+    }
 }

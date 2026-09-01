@@ -120,6 +120,36 @@ public sealed class KnowledgeNodeTests
         Assert.Equal(1, node.CurrentRevision?.Version);
     }
 
+    [Fact]
+    public void AddRevision_RejectsDuplicateRevisionIdentityWithoutPartialRevision()
+    {
+        var node = CreateArticle();
+        var initialRevisionId = node.CurrentRevisionId;
+
+        Assert.Throws<ArgumentException>(() => node.AddRevision(
+            initialRevisionId!.Value,
+            expectedVersion: 1,
+            "Updated",
+            "Updated content",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow));
+        Assert.Single(node.Revisions);
+        Assert.Equal(initialRevisionId, node.CurrentRevisionId);
+    }
+
+    [Fact]
+    public void CreateArticle_RejectsTitleOverMaximumLength()
+    {
+        Assert.Throws<ArgumentException>(() => KnowledgeNode.CreateArticle(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            new string('a', KnowledgeRevision.MaxTitleLength + 1),
+            "Content",
+            Guid.NewGuid(),
+            DateTimeOffset.UtcNow));
+    }
+
     private static KnowledgeNode CreateArticle() => KnowledgeNode.CreateArticle(
         Guid.NewGuid(),
         Guid.NewGuid(),

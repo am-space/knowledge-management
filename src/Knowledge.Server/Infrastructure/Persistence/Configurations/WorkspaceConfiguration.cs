@@ -10,7 +10,9 @@ public sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspace>
     {
         builder.ToTable("Workspaces");
         builder.HasKey(workspace => workspace.Id);
-        builder.Property(workspace => workspace.Name).HasMaxLength(200).IsRequired();
+        builder.Property(workspace => workspace.Name)
+            .HasMaxLength(Workspace.MaxNameLength)
+            .IsRequired();
         builder.Property(workspace => workspace.CreatedAt).IsRequired();
         builder.Property(workspace => workspace.CreatedBy).IsRequired();
         builder.HasOne<User>()

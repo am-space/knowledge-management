@@ -62,6 +62,13 @@ public sealed class KnowledgeNode
             throw new RevisionConflictException(expectedVersion, CurrentRevision.Version);
         }
 
+        if (_revisions.Any(revision => revision.Id == revisionId))
+        {
+            throw new ArgumentException(
+                "A revision with the supplied ID already exists on this node.",
+                nameof(revisionId));
+        }
+
         var revision = new KnowledgeRevision(
             revisionId,
             WorkspaceId,

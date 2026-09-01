@@ -21,7 +21,9 @@ public sealed class KnowledgeRevisionConfiguration : IEntityTypeConfiguration<Kn
         });
         builder.HasIndex(revision => new { revision.NodeId, revision.Version }).IsUnique();
         builder.Property(revision => revision.Version).IsRequired();
-        builder.Property(revision => revision.Title).HasMaxLength(500).IsRequired();
+        builder.Property(revision => revision.Title)
+            .HasMaxLength(KnowledgeRevision.MaxTitleLength)
+            .IsRequired();
         builder.Property(revision => revision.ContentMarkdown).IsRequired();
         builder.Property(revision => revision.CreatedAt).IsRequired();
         builder.Property(revision => revision.CreatedBy).IsRequired();

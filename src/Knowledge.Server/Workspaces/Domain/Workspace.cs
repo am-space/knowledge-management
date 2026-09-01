@@ -2,6 +2,8 @@ namespace Knowledge.Server.Workspaces.Domain;
 
 public sealed class Workspace
 {
+    public const int MaxNameLength = 200;
+
     private Workspace()
     {
     }
@@ -13,9 +15,17 @@ public sealed class Workspace
             throw new ArgumentException("A workspace ID is required.", nameof(id));
         }
 
-        if (string.IsNullOrWhiteSpace(name))
+        var normalizedName = name?.Trim();
+        if (string.IsNullOrEmpty(normalizedName))
         {
             throw new ArgumentException("A workspace name is required.", nameof(name));
+        }
+
+        if (normalizedName.Length > MaxNameLength)
+        {
+            throw new ArgumentException(
+                $"A workspace name cannot exceed {MaxNameLength} characters.",
+                nameof(name));
         }
 
         if (createdBy == Guid.Empty)
@@ -24,7 +34,7 @@ public sealed class Workspace
         }
 
         Id = id;
-        Name = name.Trim();
+        Name = normalizedName;
         CreatedBy = createdBy;
         CreatedAt = createdAt;
     }

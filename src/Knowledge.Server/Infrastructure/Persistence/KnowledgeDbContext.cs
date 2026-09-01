@@ -30,13 +30,26 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
         }
 
         var ownsTransaction = Database.CurrentTransaction is null;
+        var ambientTransaction = Database.CurrentTransaction;
         using var transaction = ownsTransaction ? Database.BeginTransaction() : null;
+        var savepointName = ownsTransaction ? null : CreateSavepointName();
+        var savepointCreated = false;
         try
         {
+            if (savepointName is not null)
+            {
+                ambientTransaction!.CreateSavepoint(savepointName);
+                savepointCreated = true;
+            }
+
             var affectedRows = base.SaveChanges(acceptAllChangesOnSuccess: false);
             PrepareCurrentRevisionPointerSave(saveState);
             affectedRows += base.SaveChanges(acceptAllChangesOnSuccess: false);
             transaction?.Commit();
+            if (savepointName is not null)
+            {
+                ambientTransaction!.ReleaseSavepoint(savepointName);
+            }
 
             if (acceptAllChangesOnSuccess)
             {
@@ -51,8 +64,22 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
         }
         catch
         {
-            transaction?.Rollback();
-            RestorePendingStates(saveState);
+            try
+            {
+                if (transaction is not null)
+                {
+                    transaction.Rollback();
+                }
+                else if (savepointCreated)
+                {
+                    ambientTransaction!.RollbackToSavepoint(savepointName!);
+                }
+            }
+            finally
+            {
+                RestorePendingStates(saveState);
+            }
+
             throw;
         }
     }
@@ -85,11 +112,20 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
         }
 
         var ownsTransaction = Database.CurrentTransaction is null;
+        var ambientTransaction = Database.CurrentTransaction;
         await using var transaction = ownsTransaction
             ? await Database.BeginTransactionAsync(cancellationToken)
             : null;
+        var savepointName = ownsTransaction ? null : CreateSavepointName();
+        var savepointCreated = false;
         try
         {
+            if (savepointName is not null)
+            {
+                await ambientTransaction!.CreateSavepointAsync(savepointName, cancellationToken);
+                savepointCreated = true;
+            }
+
             var affectedRows = await base.SaveChangesAsync(
                 acceptAllChangesOnSuccess: false,
                 cancellationToken);
@@ -100,6 +136,10 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
             if (transaction is not null)
             {
                 await transaction.CommitAsync(cancellationToken);
+            }
+            else
+            {
+                await ambientTransaction!.ReleaseSavepointAsync(savepointName!, cancellationToken);
             }
 
             if (acceptAllChangesOnSuccess)
@@ -115,12 +155,24 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
         }
         catch
         {
-            if (transaction is not null)
+            try
             {
-                await transaction.RollbackAsync(CancellationToken.None);
+                if (transaction is not null)
+                {
+                    await transaction.RollbackAsync(CancellationToken.None);
+                }
+                else if (savepointCreated)
+                {
+                    await ambientTransaction!.RollbackToSavepointAsync(
+                        savepointName!,
+                        CancellationToken.None);
+                }
+            }
+            finally
+            {
+                RestorePendingStates(saveState);
             }
 
-            RestorePendingStates(saveState);
             throw;
         }
     }
@@ -178,6 +230,8 @@ public abstract class KnowledgeDbContext(DbContextOptions options) : DbContext(o
             Entry(node).Property(candidate => candidate.CurrentRevisionId).CurrentValue = revision.Id;
         }
     }
+
+    private static string CreateSavepointName() => $"InitialRevision_{Guid.NewGuid():N}";
 
     private sealed record InitialRevisionSaveState(
         IReadOnlyList<(KnowledgeNode Node, KnowledgeRevision Revision)> InitialRevisions,

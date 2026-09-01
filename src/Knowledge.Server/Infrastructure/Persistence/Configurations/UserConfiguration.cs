@@ -10,7 +10,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("Users");
         builder.HasKey(user => user.Id);
-        builder.Property(user => user.DisplayName).HasMaxLength(200).IsRequired();
+        builder.Property(user => user.DisplayName)
+            .HasMaxLength(User.MaxDisplayNameLength)
+            .IsRequired();
         builder.Property(user => user.CreatedAt).IsRequired();
     }
 }

@@ -2,6 +2,8 @@ namespace Knowledge.Server.Knowledge.Domain;
 
 public sealed class KnowledgeRevision
 {
+    public const int MaxTitleLength = 500;
+
     private KnowledgeRevision()
     {
     }
@@ -36,9 +38,17 @@ public sealed class KnowledgeRevision
             throw new ArgumentOutOfRangeException(nameof(version), "A revision version must be positive.");
         }
 
-        if (string.IsNullOrWhiteSpace(title))
+        var normalizedTitle = title?.Trim();
+        if (string.IsNullOrEmpty(normalizedTitle))
         {
             throw new ArgumentException("A revision title is required.", nameof(title));
+        }
+
+        if (normalizedTitle.Length > MaxTitleLength)
+        {
+            throw new ArgumentException(
+                $"A revision title cannot exceed {MaxTitleLength} characters.",
+                nameof(title));
         }
 
         ArgumentNullException.ThrowIfNull(contentMarkdown);
@@ -52,7 +62,7 @@ public sealed class KnowledgeRevision
         WorkspaceId = workspaceId;
         NodeId = nodeId;
         Version = version;
-        Title = title.Trim();
+        Title = normalizedTitle;
         ContentMarkdown = contentMarkdown;
         CreatedBy = createdBy;
         CreatedAt = createdAt;

@@ -8,8 +8,11 @@ namespace Knowledge.Server.IntegrationTests;
 
 public sealed class KnowledgeMigrationTests
 {
-    [Fact]
-    public async Task InitialRevisionFailure_PreservesTrackedInsertsForRetry()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task InitialRevisionFailure_PreservesTrackedInsertsForRetry(
+        bool useAmbientTransaction)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"knowledge-retry-{Guid.NewGuid():N}.db");
         try
@@ -19,6 +22,9 @@ public sealed class KnowledgeMigrationTests
                 .Options;
             await using var context = new SqliteKnowledgeDbContext(options);
             await context.Database.MigrateAsync();
+            await using var ambientTransaction = useAmbientTransaction
+                ? await context.Database.BeginTransactionAsync()
+                : null;
 
             var now = DateTimeOffset.UtcNow;
             var owner = new User(Guid.NewGuid(), "Local owner", now);
@@ -49,6 +55,10 @@ public sealed class KnowledgeMigrationTests
 
             await context.Database.ExecuteSqlRawAsync("DROP TRIGGER FailCurrentRevisionUpdate;");
             await context.SaveChangesAsync();
+            if (ambientTransaction is not null)
+            {
+                await ambientTransaction.CommitAsync();
+            }
 
             Assert.Single(await context.KnowledgeNodes.ToListAsync());
             Assert.Single(await context.KnowledgeRevisions.ToListAsync());

@@ -65,9 +65,9 @@ The Article application boundary has these inputs and results:
 | Get | Trusted context, node ID | `Found` with the exact current Article revision | `NotFound` |
 | Update | Trusted context, node ID, `expectedRevisionVersion`, `title`, `contentMarkdown` | `Updated` with the new exact current revision | `ValidationFailed`, `NotFound`, `RevisionConflict` |
 
-Titles and Markdown are required strings. A title containing only whitespace is invalid. Concrete
-size limits may be added before implementation and must then be documented and tested. Unknown or
-unsupported node types are not treated as Articles.
+Titles and Markdown are required strings. A title containing only whitespace is invalid, and a
+title cannot exceed 500 characters after surrounding whitespace is removed. Unknown or unsupported
+node types are not treated as Articles.
 
 Create atomically inserts the node, revision 1, and current-revision pointer. Update performs the
 following work in one database transaction:

@@ -2,6 +2,8 @@ namespace Knowledge.Server.Workspaces.Domain;
 
 public sealed class User
 {
+    public const int MaxDisplayNameLength = 200;
+
     private User()
     {
     }
@@ -13,13 +15,21 @@ public sealed class User
             throw new ArgumentException("A user ID is required.", nameof(id));
         }
 
-        if (string.IsNullOrWhiteSpace(displayName))
+        var normalizedDisplayName = displayName?.Trim();
+        if (string.IsNullOrEmpty(normalizedDisplayName))
         {
             throw new ArgumentException("A display name is required.", nameof(displayName));
         }
 
+        if (normalizedDisplayName.Length > MaxDisplayNameLength)
+        {
+            throw new ArgumentException(
+                $"A display name cannot exceed {MaxDisplayNameLength} characters.",
+                nameof(displayName));
+        }
+
         Id = id;
-        DisplayName = displayName.Trim();
+        DisplayName = normalizedDisplayName;
         CreatedAt = createdAt;
     }
 
