@@ -13,15 +13,17 @@ public sealed class PersistenceOptions : IValidatableObject
 
     public string? PostgreSqlConnectionString { get; init; }
 
-    public PersistenceProvider ParseProvider()
+    public PersistenceProvider ParseProvider() => ParseProvider(Provider);
+
+    public static PersistenceProvider ParseProvider(string providerName)
     {
-        if (Enum.TryParse<PersistenceProvider>(Provider, ignoreCase: true, out var provider))
+        if (Enum.TryParse<PersistenceProvider>(providerName, ignoreCase: true, out var provider))
         {
             return provider;
         }
 
         throw new InvalidOperationException(
-            $"Unsupported persistence provider '{Provider}'. Supported values are Sqlite and PostgreSql.");
+            $"Unsupported persistence provider '{providerName}'. Supported values are Sqlite and PostgreSql.");
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
