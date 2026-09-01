@@ -37,13 +37,9 @@ public static class PersistenceServiceCollectionExtensions
                 : serviceProvider.GetRequiredService<PostgreSqlKnowledgeDbContext>();
         });
 
-        var persistenceOptions = configuration
-            .GetSection(PersistenceOptions.SectionName)
-            .Get<PersistenceOptions>() ?? new PersistenceOptions();
-        if (Enum.TryParse<PersistenceProvider>(
-                persistenceOptions.Provider,
-                ignoreCase: true,
-                out var provider) && provider == PersistenceProvider.Sqlite)
+        var providerName = configuration[$"{PersistenceOptions.SectionName}:Provider"]
+            ?? nameof(PersistenceProvider.Sqlite);
+        if (PersistenceOptions.ParseProvider(providerName) == PersistenceProvider.Sqlite)
         {
             services.AddOptions<LocalWorkspaceOptions>()
                 .Bind(configuration.GetSection(LocalWorkspaceOptions.SectionName))

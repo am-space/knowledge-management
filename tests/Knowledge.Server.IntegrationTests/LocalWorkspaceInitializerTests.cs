@@ -121,7 +121,12 @@ public sealed class LocalWorkspaceInitializerTests
 
         public static async Task<TestDatabase> CreateAsync()
         {
-            var connection = new SqliteConnection("Data Source=:memory:");
+            var connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = ":memory:",
+                ForeignKeys = true,
+            }.ConnectionString;
+            var connection = new SqliteConnection(connectionString);
             await connection.OpenAsync();
             var options = new DbContextOptionsBuilder<SqliteKnowledgeDbContext>()
                 .UseSqlite(connection)
