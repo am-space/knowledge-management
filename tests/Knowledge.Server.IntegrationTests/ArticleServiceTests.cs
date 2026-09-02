@@ -5,6 +5,7 @@ using Knowledge.Server.Knowledge.Features;
 using Knowledge.Server.Workspaces.Domain;
 using Knowledge.Server.Workspaces.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Knowledge.Server.IntegrationTests;
 
@@ -127,6 +128,105 @@ public sealed class ArticleServiceTests
             .SingleAsync());
     }
 
+    [Theory]
+    [InlineData(PersistenceProvider.Sqlite)]
+    [InlineData(PersistenceProvider.PostgreSql)]
+    [Trait("Category", "PostgreSql")]
+    public async Task ConcurrentUpdates_CommitExactlyOneRevision(PersistenceProvider provider)
+    {
+        await using var database = await TestDatabase.CreateAsync(provider);
+        var (ownerId, workspaceId, _) = await SeedWorkspacesAsync(database.Context);
+        var initialService = new ArticleService(
+            database.Context,
+            new StubWorkspaceContext(workspaceId, ownerId),
+            new FixedTimeProvider(DateTimeOffset.UtcNow));
+        var created = await initialService.CreateAsync("Article", "Initial");
+        database.Context.ChangeTracker.Clear();
+
+        var gate = new ConcurrentReadGate();
+        await using var firstContext = database.CreateContext(gate);
+        await using var secondContext = database.CreateContext(gate);
+        var firstService = new ArticleService(
+            firstContext,
+            new StubWorkspaceContext(workspaceId, ownerId),
+            new FixedTimeProvider(DateTimeOffset.UtcNow));
+        var secondService = new ArticleService(
+            secondContext,
+            new StubWorkspaceContext(workspaceId, ownerId),
+            new FixedTimeProvider(DateTimeOffset.UtcNow));
+
+        var results = await Task.WhenAll(
+            firstService.UpdateAsync(created.Article!.Id, 1, "First", "First"),
+            secondService.UpdateAsync(created.Article.Id, 1, "Second", "Second"));
+
+        Assert.Single(results, result => result.Status == ArticleResultStatus.Updated);
+        var conflict = Assert.Single(
+            results,
+            result => result.Status == ArticleResultStatus.RevisionConflict);
+        Assert.Equal(2, conflict.CurrentRevisionVersion);
+        database.Context.ChangeTracker.Clear();
+        Assert.Equal(2, await database.Context.KnowledgeRevisions
+            .CountAsync(revision => revision.NodeId == created.Article.Id));
+        Assert.Equal(2, await database.Context.KnowledgeNodes
+            .Where(node => node.Id == created.Article.Id)
+            .Select(node => node.CurrentRevision!.Version)
+            .SingleAsync());
+    }
+
+    [Theory]
+    [InlineData(PersistenceProvider.Sqlite)]
+    [InlineData(PersistenceProvider.PostgreSql)]
+    [Trait("Category", "PostgreSql")]
+    public async Task CancellationDuringMutation_RollsBackCreateAndUpdate(
+        PersistenceProvider provider)
+    {
+        await using var database = await TestDatabase.CreateAsync(provider);
+        var (ownerId, workspaceId, _) = await SeedWorkspacesAsync(database.Context);
+        var workspaceContext = new StubWorkspaceContext(workspaceId, ownerId);
+        var clock = new FixedTimeProvider(DateTimeOffset.UtcNow);
+
+        using var createCancellation = new CancellationTokenSource();
+        await using (var createContext = database.CreateContext(
+            new CancelPointerUpdateInterceptor(createCancellation)))
+        {
+            var createService = new ArticleService(createContext, workspaceContext, clock);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => createService.CreateAsync(
+                "Canceled create",
+                "Canceled create",
+                createCancellation.Token));
+        }
+
+        database.Context.ChangeTracker.Clear();
+        Assert.Empty(await database.Context.KnowledgeNodes.ToListAsync());
+        Assert.Empty(await database.Context.KnowledgeRevisions.ToListAsync());
+
+        var service = new ArticleService(database.Context, workspaceContext, clock);
+        var created = await service.CreateAsync("Article", "Initial");
+        database.Context.ChangeTracker.Clear();
+
+        using var updateCancellation = new CancellationTokenSource();
+        await using (var updateContext = database.CreateContext(
+            new CancelPointerUpdateInterceptor(updateCancellation)))
+        {
+            var updateService = new ArticleService(updateContext, workspaceContext, clock);
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => updateService.UpdateAsync(
+                created.Article!.Id,
+                1,
+                "Canceled update",
+                "Canceled update",
+                updateCancellation.Token));
+        }
+
+        database.Context.ChangeTracker.Clear();
+        Assert.Single(await database.Context.KnowledgeRevisions
+            .Where(revision => revision.NodeId == created.Article!.Id)
+            .ToListAsync());
+        Assert.Equal(1, await database.Context.KnowledgeNodes
+            .Where(node => node.Id == created.Article!.Id)
+            .Select(node => node.CurrentRevision!.Version)
+            .SingleAsync());
+    }
+
     [Fact]
     public async Task ValidationAndCancellation_DoNotWrite()
     {
@@ -174,25 +274,94 @@ public sealed class ArticleServiceTests
         public void Advance(TimeSpan duration) => utcNow += duration;
     }
 
-    private sealed class TestDatabase(KnowledgeDbContext context, string? sqlitePath) : IAsyncDisposable
+    private sealed class ConcurrentReadGate : DbCommandInterceptor
+    {
+        private readonly TaskCompletionSource _bothReadersArrived = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _readerCount;
+
+        public override async ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("KnowledgeNodes", StringComparison.Ordinal) &&
+                Interlocked.Increment(ref _readerCount) <= 2)
+            {
+                if (Volatile.Read(ref _readerCount) == 2)
+                {
+                    _bothReadersArrived.TrySetResult();
+                }
+
+                await _bothReadersArrived.Task.WaitAsync(cancellationToken);
+            }
+
+            return result;
+        }
+    }
+
+    private sealed class CancelPointerUpdateInterceptor(CancellationTokenSource cancellation)
+        : DbCommandInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            CancelAtPointerUpdate(command);
+            return ValueTask.FromResult(result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            CancelAtPointerUpdate(command);
+            return ValueTask.FromResult(result);
+        }
+
+        private void CancelAtPointerUpdate(DbCommand command)
+        {
+            if (command.CommandText.StartsWith("UPDATE", StringComparison.OrdinalIgnoreCase) &&
+                command.CommandText.Contains("KnowledgeNodes", StringComparison.Ordinal) &&
+                command.CommandText.Contains("CurrentRevisionId", StringComparison.Ordinal))
+            {
+                cancellation.Cancel();
+                throw new OperationCanceledException(cancellation.Token);
+            }
+        }
+    }
+
+    private sealed class TestDatabase(
+        KnowledgeDbContext context,
+        PersistenceProvider provider,
+        string connectionString,
+        string? sqlitePath) : IAsyncDisposable
     {
         public KnowledgeDbContext Context { get; } = context;
 
         public static async Task<TestDatabase> CreateAsync(PersistenceProvider provider)
         {
             KnowledgeDbContext context;
+            string connectionString;
             string? sqlitePath = null;
             if (provider == PersistenceProvider.Sqlite)
             {
                 sqlitePath = Path.Combine(Path.GetTempPath(), $"articles-{Guid.NewGuid():N}.db");
+                connectionString = $"Data Source={sqlitePath};Foreign Keys=True;Default Timeout=30";
                 var options = new DbContextOptionsBuilder<SqliteKnowledgeDbContext>()
-                    .UseSqlite($"Data Source={sqlitePath};Foreign Keys=True;Default Timeout=30")
+                    .UseSqlite(connectionString)
                     .Options;
                 context = new SqliteKnowledgeDbContext(options);
             }
             else
             {
-                var connectionString = Environment.GetEnvironmentVariable("KNOWLEDGE_TEST_POSTGRES");
+                connectionString = Environment.GetEnvironmentVariable("KNOWLEDGE_TEST_POSTGRES")!;
                 Assert.False(string.IsNullOrWhiteSpace(connectionString),
                     "scripts/verify.sh --integration configures PostgreSQL.");
                 var options = new DbContextOptionsBuilder<PostgreSqlKnowledgeDbContext>()
@@ -203,7 +372,25 @@ public sealed class ArticleServiceTests
             }
 
             await context.Database.MigrateAsync();
-            return new TestDatabase(context, sqlitePath);
+            return new TestDatabase(context, provider, connectionString, sqlitePath);
+        }
+
+        public KnowledgeDbContext CreateContext(params IInterceptor[] interceptors)
+        {
+            if (provider == PersistenceProvider.Sqlite)
+            {
+                var options = new DbContextOptionsBuilder<SqliteKnowledgeDbContext>()
+                    .UseSqlite(connectionString)
+                    .AddInterceptors(interceptors)
+                    .Options;
+                return new SqliteKnowledgeDbContext(options);
+            }
+
+            var postgreSqlOptions = new DbContextOptionsBuilder<PostgreSqlKnowledgeDbContext>()
+                .UseNpgsql(connectionString)
+                .AddInterceptors(interceptors)
+                .Options;
+            return new PostgreSqlKnowledgeDbContext(postgreSqlOptions);
         }
 
         public Task CreatePointerFailureTriggerAsync() => Context.Database.IsSqlite()
