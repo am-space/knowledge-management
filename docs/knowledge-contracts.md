@@ -122,5 +122,14 @@ context, which remains `404` to avoid cross-workspace disclosure.
 Unexpected failures use a generic `500` Problem Details response without knowledge content,
 credentials, database details, or exception text.
 
+## Compatibility guidance
+
+Article routes, methods, field names, representations, status codes, Problem Details types, and the
+meaning of `expectedRevisionVersion` are public contracts. Clients must ignore unknown response and
+Problem Details properties so the API can add metadata compatibly. Servers may add optional
+properties, new routes, and new problem types without changing the Milestone 1 operations. Renaming
+or removing fields, changing their types or meanings, or reusing an existing problem type for a
+different condition requires explicit migration and compatibility guidance.
+
 See [ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md) for the durable
 decision behind these contracts.
