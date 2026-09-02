@@ -1,5 +1,6 @@
 using Knowledge.Server;
 using Knowledge.Server.Infrastructure.Persistence;
+using Knowledge.Server.Knowledge.Presentation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -16,6 +17,8 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+app.UseMiddleware<ArticleExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -31,6 +34,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = registration => registration.Tags.Contains("ready"),
     ResponseWriter = HealthResponseWriter.WriteAsync,
 });
+app.MapArticleEndpoints();
 
 app.Run();
 

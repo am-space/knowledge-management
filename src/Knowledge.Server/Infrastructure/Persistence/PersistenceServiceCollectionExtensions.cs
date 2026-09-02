@@ -51,6 +51,10 @@ public static class PersistenceServiceCollectionExtensions
             services.AddScoped<IWorkspaceContext, LocalWorkspaceContext>();
             services.AddHostedService<LocalWorkspaceInitializer>();
         }
+        else
+        {
+            services.AddScoped<IWorkspaceContext, UnavailableWorkspaceContext>();
+        }
 
         return services;
     }
