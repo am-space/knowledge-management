@@ -19,11 +19,9 @@ public static class ArticleEndpoints
     private static async Task<IResult> CreateAsync(
         CreateArticleRequest request,
         ArticleService service,
-        IWorkspaceContext workspaceContext,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        EnsureWorkspaceResolved(workspaceContext);
         var result = await service.CreateAsync(
             request.Title,
             request.ContentMarkdown,
@@ -44,7 +42,6 @@ public static class ArticleEndpoints
     private static async Task<IResult> GetAsync(
         string id,
         ArticleService service,
-        IWorkspaceContext workspaceContext,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -54,11 +51,10 @@ public static class ArticleEndpoints
                 httpContext,
                 new Dictionary<string, string[]>(StringComparer.Ordinal)
                 {
-                    ["id"] = ["Article ID must be a valid UUID."],
+                    ["id"] = ["Article ID must be a canonical lowercase hyphenated UUID."],
                 });
         }
 
-        EnsureWorkspaceResolved(workspaceContext);
         var result = await service.GetAsync(articleId, cancellationToken);
         return result.Status switch
         {
@@ -72,7 +68,6 @@ public static class ArticleEndpoints
         string id,
         UpdateArticleRequest request,
         ArticleService service,
-        IWorkspaceContext workspaceContext,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -82,11 +77,10 @@ public static class ArticleEndpoints
                 httpContext,
                 new Dictionary<string, string[]>(StringComparer.Ordinal)
                 {
-                    ["id"] = ["Article ID must be a valid UUID."],
+                    ["id"] = ["Article ID must be a canonical lowercase hyphenated UUID."],
                 });
         }
 
-        EnsureWorkspaceResolved(workspaceContext);
         var result = await service.UpdateAsync(
             articleId,
             request.ExpectedRevisionVersion,
@@ -115,11 +109,6 @@ public static class ArticleEndpoints
         Guid.TryParseExact(value, "D", out id) &&
         string.Equals(value, id.ToString("D"), StringComparison.Ordinal);
 
-    private static void EnsureWorkspaceResolved(IWorkspaceContext workspaceContext)
-    {
-        _ = workspaceContext.WorkspaceId;
-        _ = workspaceContext.ActorId;
-    }
 }
 
 public sealed record CreateArticleRequest(string? Title, string? ContentMarkdown);

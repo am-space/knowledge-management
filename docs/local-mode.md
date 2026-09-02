@@ -47,8 +47,9 @@ startup failure rolls back all provisioning and stops the host with an actionabl
 The trusted local host exposes the resolved owner and workspace through the application workspace
 context before invoking application behavior. Client-supplied route values, headers, query
 parameters, request bodies, database paths, or IDs cannot override the active workspace. The
-PostgreSQL profile does not register this initializer or local context; hosted identity will be
-provided by its authentication boundary.
+PostgreSQL profile does not register this initializer or local context. Until hosted authentication
+provides a trusted identity and membership resolver, it registers a denied workspace context so
+knowledge requests return the documented `403` response instead of selecting an untrusted tenant.
 
 Knowledge persistence remains explicitly filtered by the resolved workspace ID. This keeps the
 local shortcut at the host boundary and preserves the same application and persistence contract

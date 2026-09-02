@@ -98,6 +98,10 @@ public sealed class ArticleEndpointTests
             HttpStatusCode.BadRequest,
             "urn:knowledge:problem:validation");
         Assert.True(invalidId.RootElement.GetProperty("errors").TryGetProperty("id", out _));
+        Assert.Contains(
+            "canonical lowercase hyphenated UUID",
+            invalidId.RootElement.GetProperty("errors").GetProperty("id")[0].GetString(),
+            StringComparison.Ordinal);
 
         var nonCanonicalIdResponse = await client.GetAsync(
             $"/api/articles/{Guid.NewGuid().ToString("D").ToUpperInvariant()}");
@@ -182,6 +186,29 @@ public sealed class ArticleEndpointTests
 
         await AssertProblemAsync(
             response,
+            HttpStatusCode.Forbidden,
+            "urn:knowledge:problem:workspace-access-denied");
+    }
+
+    [Fact]
+    public async Task PostgreSqlWithoutAuthentication_DeniesBeforeRouteAndBodyValidation()
+    {
+        await using var factory = new PostgreSqlDeniedArticleApiFactory();
+        using var client = factory.CreateClient();
+
+        var invalidIdResponse = await client.GetAsync("/api/articles/not-a-uuid");
+        await AssertProblemAsync(
+            invalidIdResponse,
+            HttpStatusCode.Forbidden,
+            "urn:knowledge:problem:workspace-access-denied");
+
+        using var malformedContent = new StringContent(
+            "{ broken",
+            Encoding.UTF8,
+            "application/json");
+        var malformedResponse = await client.PostAsync("/api/articles", malformedContent);
+        await AssertProblemAsync(
+            malformedResponse,
             HttpStatusCode.Forbidden,
             "urn:knowledge:problem:workspace-access-denied");
     }
@@ -288,6 +315,17 @@ public sealed class ArticleEndpointTests
             }
 
             GC.SuppressFinalize(this);
+        }
+    }
+
+    private sealed class PostgreSqlDeniedArticleApiFactory : WebApplicationFactory<Program>
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            builder.UseSetting("Persistence:Provider", "PostgreSql");
+            builder.UseSetting(
+                "Persistence:PostgreSqlConnectionString",
+                "Host=127.0.0.1;Port=1;Database=unavailable;Username=none;Password=none;Timeout=1");
         }
     }
 

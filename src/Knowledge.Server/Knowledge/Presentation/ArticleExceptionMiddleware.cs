@@ -6,19 +6,35 @@ public sealed class ArticleExceptionMiddleware(
     RequestDelegate next,
     ILogger<ArticleExceptionMiddleware> logger)
 {
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IWorkspaceContext workspaceContext)
     {
         try
         {
+            if (context.Request.Path.StartsWithSegments("/api/articles"))
+            {
+                _ = workspaceContext.WorkspaceId;
+                _ = workspaceContext.ActorId;
+            }
+
             await next(context);
         }
         catch (WorkspaceAccessDeniedException)
         {
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
             await ArticleProblems.WorkspaceAccessDenied(context).ExecuteAsync(context);
         }
         catch (BadHttpRequestException exception)
         {
             logger.LogInformation(exception, "The Article request body could not be read.");
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
             await ArticleProblems.Validation(
                     context,
                     new Dictionary<string, string[]>(StringComparer.Ordinal)

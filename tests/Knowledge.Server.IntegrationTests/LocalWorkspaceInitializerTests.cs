@@ -75,7 +75,7 @@ public sealed class LocalWorkspaceInitializerTests
     }
 
     [Fact]
-    public void PostgreSqlComposition_DoesNotRegisterLocalWorkspaceServices()
+    public void PostgreSqlComposition_RegistersDeniedFallbackWithoutLocalInitializer()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -90,7 +90,10 @@ public sealed class LocalWorkspaceInitializerTests
         services.AddPersistence(configuration, Directory.GetCurrentDirectory());
 
         using var provider = services.BuildServiceProvider();
-        Assert.Null(provider.GetService<IWorkspaceContext>());
+        var context = provider.GetRequiredService<IWorkspaceContext>();
+        Assert.IsType<UnavailableWorkspaceContext>(context);
+        Assert.Throws<WorkspaceAccessDeniedException>(() => context.WorkspaceId);
+        Assert.Throws<WorkspaceAccessDeniedException>(() => context.ActorId);
         Assert.DoesNotContain(
             services,
             descriptor => descriptor.ImplementationType == typeof(LocalWorkspaceInitializer));
