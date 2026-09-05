@@ -1,82 +1,170 @@
+import AddOutlined from '@mui/icons-material/AddOutlined'
+import ArticleOutlined from '@mui/icons-material/ArticleOutlined'
 import CloudDoneOutlined from '@mui/icons-material/CloudDoneOutlined'
 import CloudOffOutlined from '@mui/icons-material/CloudOffOutlined'
-import {
-  AppBar,
-  Box,
-  Chip,
-  Container,
-  CssBaseline,
-  Paper,
-  Stack,
-  ThemeProvider,
-  Toolbar,
-  Typography,
-  createTheme,
-  useMediaQuery,
-} from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import RefreshOutlined from '@mui/icons-material/RefreshOutlined'
+import SaveOutlined from '@mui/icons-material/SaveOutlined'
+import { Alert, AppBar, Box, Button, Chip, CircularProgress, CssBaseline, Divider, List, ListItemButton, ListItemIcon, ListItemText, Paper, Stack, Tab, Tabs, TextField, ThemeProvider, Toolbar, Typography, createTheme, useMediaQuery } from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { ArticleApiError, createArticle, getArticle, updateArticle, type Article } from './articleClient'
+import { forgetArticleId, loadArticleIds, rememberArticleId } from './articleIndex'
 import { getReadiness } from './healthClient'
 
 type ConnectionState = 'checking' | 'connected' | 'unavailable'
+type EditorMode = 'source' | 'preview'
+interface Draft { title: string; contentMarkdown: string }
+const emptyDraft: Draft = { title: '', contentMarkdown: '' }
 
 export default function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
-  const theme = useMemo(
-    () => createTheme({ palette: { mode: prefersDarkMode ? 'dark' : 'light' } }),
-    [prefersDarkMode],
-  )
+  const theme = useMemo(() => createTheme({ palette: { mode: prefersDarkMode ? 'dark' : 'light' }, typography: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }, shape: { borderRadius: 10 } }), [prefersDarkMode])
   const [connection, setConnection] = useState<ConnectionState>('checking')
+  const [articles, setArticles] = useState<Article[]>([])
+  const [loadingTree, setLoadingTree] = useState(true)
+  const [treeRequestIds, setTreeRequestIds] = useState(loadArticleIds)
+  const [treeFailures, setTreeFailures] = useState<{ id: string; error: ArticleApiError }[]>([])
+  const [selected, setSelected] = useState<Article | null>(null)
+  const [draft, setDraft] = useState<Draft>(emptyDraft)
+  const [creating, setCreating] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const [error, setError] = useState<ArticleApiError | null>(null)
+  const [status, setStatus] = useState('')
+  const navigationRequest = useRef(0)
+  const [indexWarning, setIndexWarning] = useState(false)
+  const [mode, setMode] = useState<EditorMode>('source')
+
+  const replaceArticle = useCallback((article: Article) => {
+    setArticles((current) => [article, ...current.filter((item) => item.id !== article.id)])
+    if (!rememberArticleId(article.id)) setIndexWarning(true)
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
-    getReadiness(controller.signal)
-      .then(() => setConnection('connected'))
-      .catch(() => setConnection('unavailable'))
+    getReadiness(controller.signal).then(() => setConnection('connected')).catch((requestError: unknown) => {
+      if (!(requestError instanceof DOMException && requestError.name === 'AbortError')) setConnection('unavailable')
+    })
     return () => controller.abort()
   }, [])
 
-  const connected = connection === 'connected'
+  useEffect(() => {
+    const controller = new AbortController()
+    const ids = treeRequestIds
+    Promise.allSettled(ids.map((id) => getArticle(id, controller.signal))).then((results) => {
+      if (controller.signal.aborted) return
+      const found: Article[] = []
+      const failures: typeof treeFailures = []
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') found.push(result.value)
+        else if (result.reason instanceof ArticleApiError && result.reason.kind === 'not-found') {
+          if (!forgetArticleId(ids[index])) setIndexWarning(true)
+        } else failures.push({ id: ids[index], error: normalizeError(result.reason) })
+      })
+      setTreeFailures(failures)
+      setArticles((current) => [...current, ...found.filter((article) => !current.some((item) => item.id === article.id))])
+    }).finally(() => { if (!controller.signal.aborted) setLoadingTree(false) })
+    return () => controller.abort()
+  }, [treeRequestIds])
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AppBar position="static" color="transparent" elevation={0}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Knowledge
-          </Typography>
-          <Chip
-            icon={connected ? <CloudDoneOutlined /> : <CloudOffOutlined />}
-            color={connected ? 'success' : connection === 'checking' ? 'default' : 'error'}
-            label={connection === 'checking' ? 'Checking server' : connected ? 'Server ready' : 'Server unavailable'}
-            variant="outlined"
-          />
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth="md" sx={{ py: 8 }}>
-        <Paper variant="outlined" sx={{ p: { xs: 3, sm: 6 } }}>
-          <Stack spacing={2}>
-            <Typography variant="overline" color="primary">
-              Executable foundation
-            </Typography>
-            <Typography variant="h3" component="h1">
-              Your knowledge, ready to grow.
-            </Typography>
-            <Typography color="text.secondary" sx={{ maxWidth: 620 }}>
-              The application shell is connected. Knowledge workflows arrive in the next milestone.
-            </Typography>
-            <Box aria-live="polite" sx={{ pt: 2 }}>
-              <Typography variant="body2">
-                {connected
-                  ? 'The server and configured persistence profile are ready.'
-                  : connection === 'checking'
-                    ? 'Checking application readiness…'
-                    : 'The server could not be reached. Start it and refresh this page.'}
-              </Typography>
+  const confirmDiscard = () => {
+    const hasUnsavedChanges = creating
+      ? draft.title !== '' || draft.contentMarkdown !== ''
+      : selected !== null && (draft.title !== selected.currentRevision.title || draft.contentMarkdown !== selected.currentRevision.contentMarkdown)
+    return !hasUnsavedChanges || window.confirm('Discard unsaved changes? Cancel to keep editing and save your work.')
+  }
+
+  const beginCreate = () => {
+    if (saving || !confirmDiscard()) return
+    navigationRequest.current += 1
+    setOpeningId(null)
+    setSelected(null); setDraft(emptyDraft); setCreating(true); setError(null); setStatus('New article draft'); setMode('source')
+  }
+
+  const openArticle = async (id: string) => {
+    if (saving || !confirmDiscard()) return
+    const request = ++navigationRequest.current
+    setOpeningId(id); setError(null)
+    try {
+      const article = await getArticle(id)
+      if (request !== navigationRequest.current) return
+      replaceArticle(article); setSelected(article)
+      setDraft({ title: article.currentRevision.title, contentMarkdown: article.currentRevision.contentMarkdown })
+      setCreating(false); setStatus(`Opened revision ${article.currentRevision.version}`)
+    } catch (requestError) {
+      if (request !== navigationRequest.current) return
+      const apiError = normalizeError(requestError); setError(apiError)
+      if (apiError.kind === 'not-found') {
+        if (!forgetArticleId(id)) setIndexWarning(true)
+        setArticles((current) => current.filter((article) => article.id !== id))
+        if (selected?.id === id) setSelected(null)
+      }
+    } finally { if (request === navigationRequest.current) setOpeningId(null) }
+  }
+
+  const save = async () => {
+    if (saving || openingId !== null || (!creating && selected === null)) return
+    setSaving(true); setError(null); setStatus('Saving…')
+    try {
+      const article = creating
+        ? await createArticle(draft.title, draft.contentMarkdown)
+        : await updateArticle(selected!.id, selected!.currentRevision.version, draft.title, draft.contentMarkdown)
+      replaceArticle(article); setSelected(article)
+      setDraft({ title: article.currentRevision.title, contentMarkdown: article.currentRevision.contentMarkdown })
+      setCreating(false); setStatus(`Saved revision ${article.currentRevision.version}`)
+    } catch (requestError) {
+      setError(normalizeError(requestError)); setStatus('Save failed; your draft is preserved')
+    } finally { setSaving(false) }
+  }
+
+  const hasEditor = creating || selected !== null
+  const changed = creating || (selected !== null && (draft.title !== selected.currentRevision.title || draft.contentMarkdown !== selected.currentRevision.contentMarkdown))
+
+  return <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <Toolbar><Typography variant="h6" component="h1" sx={{ flexGrow: 1 }}>Knowledge</Typography>
+        <Chip icon={connection === 'connected' ? <CloudDoneOutlined /> : <CloudOffOutlined />} color={connection === 'connected' ? 'success' : connection === 'checking' ? 'default' : 'error'} label={connection === 'checking' ? 'Checking server' : connection === 'connected' ? 'Local workspace ready' : 'Server unavailable'} variant="outlined" />
+      </Toolbar>
+    </AppBar>
+    <Box component="main" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '280px minmax(0, 1fr)' }, minHeight: 'calc(100vh - 65px)' }}>
+      <Paper component="nav" aria-label="Knowledge tree" square elevation={0} sx={{ borderRight: { md: 1 }, borderBottom: { xs: 1, md: 0 }, borderColor: 'divider', p: 2 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}><Box><Typography variant="overline" color="text.secondary">Personal workspace</Typography><Typography variant="h6">Articles</Typography></Box><Button startIcon={<AddOutlined />} onClick={beginCreate} disabled={saving}>New</Button></Stack>
+        <Divider sx={{ my: 2 }} />
+        {treeFailures.length > 0 && <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" disabled={loadingTree} onClick={() => {
+          setLoadingTree(true)
+          setTreeRequestIds(treeFailures.map((failure) => failure.id))
+        }}>Retry loading articles</Button>}>Could not load {treeFailures.length} indexed {treeFailures.length === 1 ? 'article' : 'articles'}. {errorMessage(treeFailures[0].error)}</Alert>}
+        {loadingTree && <Stack direction="row" spacing={1} alignItems="center"><CircularProgress size={18} /><Typography>Loading articles…</Typography></Stack>}
+        {!loadingTree && treeFailures.length === 0 && articles.length === 0 && <Typography color="text.secondary">No articles yet. Create your first article.</Typography>}
+        <List disablePadding>{articles.map((article) => <ListItemButton key={article.id} selected={selected?.id === article.id && !creating} onClick={() => void openArticle(article.id)} disabled={saving || openingId === article.id}><ListItemIcon><ArticleOutlined /></ListItemIcon><ListItemText primary={article.currentRevision.title} secondary={`Revision ${article.currentRevision.version}`} /></ListItemButton>)}</List>
+      </Paper>
+      <Box sx={{ p: { xs: 2, sm: 3, lg: 5 }, minWidth: 0 }}>
+        {indexWarning && <Alert severity="warning" sx={{ mb: 2 }}>The browser could not remember changes to your article list. Server saves are unaffected, but the list may be incomplete after reloading.</Alert>}
+        {!hasEditor ? <Stack alignItems="center" justifyContent="center" sx={{ minHeight: 360, textAlign: 'center' }} spacing={2}>{error && <Alert severity="error">{errorMessage(error)}</Alert>}<ArticleOutlined color="disabled" sx={{ fontSize: 64 }} /><Typography variant="h4" component="h2">Select an article</Typography><Typography color="text.secondary">Choose one from the tree or create a new Markdown article.</Typography><Button variant="contained" startIcon={<AddOutlined />} onClick={beginCreate} disabled={saving}>Create article</Button></Stack>
+          : <Stack spacing={2} component="form" onSubmit={(event) => { event.preventDefault(); void save() }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="overline" color="primary">{creating ? 'New article' : `Revision ${selected!.currentRevision.version}`}</Typography><Typography variant="h4" component="h2">{creating ? 'Create knowledge' : 'Edit article'}</Typography></Box><Button type="submit" variant="contained" startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveOutlined />} disabled={saving || openingId !== null || !changed}>{saving ? 'Saving' : creating ? 'Create' : 'Save'}</Button></Stack>
+            {error && <Alert severity="error" action={error.kind === 'conflict' ? <Button color="inherit" startIcon={<RefreshOutlined />} onClick={() => selected && void openArticle(selected.id)} disabled={saving || openingId !== null}>Reload server version</Button> : undefined}>{errorMessage(error)}</Alert>}
+            <TextField disabled={saving || openingId !== null} label="Title" value={draft.title} required inputProps={{ maxLength: 500 }} error={Boolean(error?.errors.title)} helperText={error?.errors.title?.join(' ')} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} />
+            <Box><Tabs value={mode} onChange={(_, value: EditorMode) => setMode(value)} aria-label="Article content view"><Tab value="source" label="Markdown source" /><Tab value="preview" label="Preview" /></Tabs>
+              {mode === 'source' ? <TextField disabled={saving || openingId !== null} label="Markdown source" value={draft.contentMarkdown} multiline minRows={16} fullWidth error={Boolean(error?.errors.contentMarkdown)} helperText={error?.errors.contentMarkdown?.join(' ')} onChange={(event) => setDraft((current) => ({ ...current, contentMarkdown: event.target.value }))} sx={{ mt: 2 }} inputProps={{ style: { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' } }} />
+                : <Paper variant="outlined" aria-label="Markdown preview" sx={{ mt: 2, p: 3, minHeight: 400, overflowWrap: 'anywhere', '& pre': { overflowX: 'auto' }, '& img': { maxWidth: '100%' } }}>{draft.contentMarkdown ? <ReactMarkdown>{draft.contentMarkdown}</ReactMarkdown> : <Typography color="text.secondary">Nothing to preview yet.</Typography>}</Paper>}
             </Box>
-          </Stack>
-        </Paper>
-      </Container>
-    </ThemeProvider>
-  )
+          </Stack>}
+      </Box>
+    </Box>
+    <Box component="footer" aria-live="polite" sx={{ position: 'sticky', bottom: 0, px: 2, py: 1, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}><Typography variant="body2" color="text.secondary">{status || (connection === 'unavailable' ? 'The server could not be reached. Start it and retry.' : 'Ready')}</Typography></Box>
+  </ThemeProvider>
+}
+
+function normalizeError(error: unknown): ArticleApiError {
+  return error instanceof ArticleApiError ? error : new ArticleApiError('server', 'Something went wrong. Please try again.')
+}
+
+function errorMessage(error: ArticleApiError): string {
+  if (error.kind === 'conflict') return `This article changed on the server${error.currentRevisionVersion ? ` (now revision ${error.currentRevisionVersion})` : ''}. Your draft is preserved. Reload the server version when you are ready.`
+  if (error.kind === 'not-found') return 'This article was not found. It may have been removed.'
+  if (error.kind === 'validation') return 'Review the highlighted fields and try again.'
+  if (error.kind === 'forbidden') return 'The local workspace is unavailable. Check the server configuration.'
+  return error.message
 }
