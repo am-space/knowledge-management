@@ -15,14 +15,17 @@ type ConnectionState = 'checking' | 'connected' | 'unavailable'
 type EditorMode = 'source' | 'preview'
 interface Draft { title: string; contentMarkdown: string }
 const emptyDraft: Draft = { title: '', contentMarkdown: '' }
+const treeConcurrency = 4
+const treeRequestTimeoutMs = 15_000
 
 export default function App() {
   const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)')
   const theme = useMemo(() => createTheme({ palette: { mode: prefersDarkMode ? 'dark' : 'light' }, typography: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }, shape: { borderRadius: 10 } }), [prefersDarkMode])
   const [connection, setConnection] = useState<ConnectionState>('checking')
   const [articles, setArticles] = useState<Article[]>([])
-  const [loadingTree, setLoadingTree] = useState(true)
   const [treeRequestIds, setTreeRequestIds] = useState(loadArticleIds)
+  const [remainingTreeRequests, setRemainingTreeRequests] = useState(treeRequestIds.length)
+  const loadingTree = remainingTreeRequests > 0
   const [treeFailures, setTreeFailures] = useState<{ id: string; error: ArticleApiError }[]>([])
   const [selected, setSelected] = useState<Article | null>(null)
   const [draft, setDraft] = useState<Draft>(emptyDraft)
@@ -32,6 +35,8 @@ export default function App() {
   const [error, setError] = useState<ArticleApiError | null>(null)
   const [status, setStatus] = useState('')
   const navigationRequest = useRef(0)
+  const titleInput = useRef<HTMLInputElement>(null)
+  const [createFocusRequest, setCreateFocusRequest] = useState(0)
   const [indexWarning, setIndexWarning] = useState(false)
   const [mode, setMode] = useState<EditorMode>('source')
 
@@ -50,22 +55,43 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController()
-    const ids = treeRequestIds
-    Promise.allSettled(ids.map((id) => getArticle(id, controller.signal))).then((results) => {
-      if (controller.signal.aborted) return
-      const found: Article[] = []
-      const failures: typeof treeFailures = []
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') found.push(result.value)
-        else if (result.reason instanceof ArticleApiError && result.reason.kind === 'not-found') {
-          if (!forgetArticleId(ids[index])) setIndexWarning(true)
-        } else failures.push({ id: ids[index], error: normalizeError(result.reason) })
-      })
-      setTreeFailures(failures)
-      setArticles((current) => [...current, ...found.filter((article) => !current.some((item) => item.id === article.id))])
-    }).finally(() => { if (!controller.signal.aborted) setLoadingTree(false) })
+    let nextIndex = 0
+    const loadNext = async () => {
+      while (!controller.signal.aborted && nextIndex < treeRequestIds.length) {
+        const id = treeRequestIds[nextIndex++]
+        const requestController = new AbortController()
+        const abortRequest = () => requestController.abort()
+        controller.signal.addEventListener('abort', abortRequest, { once: true })
+        const timeout = window.setTimeout(abortRequest, treeRequestTimeoutMs)
+        try {
+          const article = await getArticle(id, requestController.signal)
+          if (controller.signal.aborted) return
+          // An open or save may already have supplied a newer representation.
+          setArticles((current) => current.some((item) => item.id === id) ? current : [...current, article])
+          setTreeFailures((current) => current.filter((failure) => failure.id !== id))
+        } catch (requestError) {
+          if (controller.signal.aborted) return
+          const apiError = requestController.signal.aborted
+            ? new ArticleApiError('unreachable', 'Loading this article timed out. Please retry.')
+            : normalizeError(requestError)
+          if (apiError.kind === 'not-found') {
+            if (!forgetArticleId(id)) setIndexWarning(true)
+            setTreeFailures((current) => current.filter((failure) => failure.id !== id))
+          } else setTreeFailures((current) => [...current.filter((failure) => failure.id !== id), { id, error: apiError }])
+        } finally {
+          window.clearTimeout(timeout)
+          controller.signal.removeEventListener('abort', abortRequest)
+          if (!controller.signal.aborted) setRemainingTreeRequests((remaining) => remaining - 1)
+        }
+      }
+    }
+    for (let worker = 0; worker < Math.min(treeConcurrency, treeRequestIds.length); worker += 1) void loadNext()
     return () => controller.abort()
   }, [treeRequestIds])
+
+  useEffect(() => {
+    if (createFocusRequest > 0) titleInput.current?.focus()
+  }, [createFocusRequest])
 
   const confirmDiscard = () => {
     const hasUnsavedChanges = creating
@@ -77,6 +103,7 @@ export default function App() {
   const beginCreate = () => {
     if (saving || !confirmDiscard()) return
     navigationRequest.current += 1
+    setCreateFocusRequest((current) => current + 1)
     setOpeningId(null)
     setSelected(null); setDraft(emptyDraft); setCreating(true); setError(null); setStatus('New article draft'); setMode('source')
   }
@@ -132,10 +159,10 @@ export default function App() {
         <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}><Box><Typography variant="overline" color="text.secondary">Personal workspace</Typography><Typography variant="h6">Articles</Typography></Box><Button startIcon={<AddOutlined />} onClick={beginCreate} disabled={saving}>New</Button></Stack>
         <Divider sx={{ my: 2 }} />
         {treeFailures.length > 0 && <Alert severity="error" sx={{ mb: 2 }} action={<Button color="inherit" disabled={loadingTree} onClick={() => {
-          setLoadingTree(true)
+          setRemainingTreeRequests(treeFailures.length)
           setTreeRequestIds(treeFailures.map((failure) => failure.id))
         }}>Retry loading articles</Button>}>Could not load {treeFailures.length} indexed {treeFailures.length === 1 ? 'article' : 'articles'}. {errorMessage(treeFailures[0].error)}</Alert>}
-        {loadingTree && <Stack direction="row" spacing={1} alignItems="center"><CircularProgress size={18} /><Typography>Loading articles…</Typography></Stack>}
+        {loadingTree && <Stack direction="row" spacing={1} alignItems="center"><CircularProgress size={18} /><Typography>Loading articles… ({remainingTreeRequests} remaining)</Typography></Stack>}
         {!loadingTree && treeFailures.length === 0 && articles.length === 0 && <Typography color="text.secondary">No articles yet. Create your first article.</Typography>}
         <List disablePadding>{articles.map((article) => <ListItemButton key={article.id} selected={selected?.id === article.id && !creating} onClick={() => void openArticle(article.id)} disabled={saving || openingId === article.id}><ListItemIcon><ArticleOutlined /></ListItemIcon><ListItemText primary={article.currentRevision.title} secondary={`Revision ${article.currentRevision.version}`} /></ListItemButton>)}</List>
       </Paper>
@@ -145,10 +172,10 @@ export default function App() {
           : <Stack spacing={2} component="form" onSubmit={(event) => { event.preventDefault(); void save() }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={2}><Box><Typography variant="overline" color="primary">{creating ? 'New article' : `Revision ${selected!.currentRevision.version}`}</Typography><Typography variant="h4" component="h2">{creating ? 'Create knowledge' : 'Edit article'}</Typography></Box><Button type="submit" variant="contained" startIcon={saving ? <CircularProgress size={18} color="inherit" /> : <SaveOutlined />} disabled={saving || openingId !== null || !changed}>{saving ? 'Saving' : creating ? 'Create' : 'Save'}</Button></Stack>
             {error && <Alert severity="error" action={error.kind === 'conflict' ? <Button color="inherit" startIcon={<RefreshOutlined />} onClick={() => selected && void openArticle(selected.id)} disabled={saving || openingId !== null}>Reload server version</Button> : undefined}>{errorMessage(error)}</Alert>}
-            <TextField disabled={saving || openingId !== null} label="Title" value={draft.title} required inputProps={{ maxLength: 500 }} error={Boolean(error?.errors.title)} helperText={error?.errors.title?.join(' ')} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} />
+            <TextField disabled={saving || openingId !== null} label="Title" inputRef={titleInput} value={draft.title} required inputProps={{ maxLength: 500 }} error={Boolean(error?.errors.title)} helperText={error?.errors.title?.join(' ')} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} />
             <Box><Tabs value={mode} onChange={(_, value: EditorMode) => setMode(value)} aria-label="Article content view"><Tab value="source" label="Markdown source" /><Tab value="preview" label="Preview" /></Tabs>
               {mode === 'source' ? <TextField disabled={saving || openingId !== null} label="Markdown source" value={draft.contentMarkdown} multiline minRows={16} fullWidth error={Boolean(error?.errors.contentMarkdown)} helperText={error?.errors.contentMarkdown?.join(' ')} onChange={(event) => setDraft((current) => ({ ...current, contentMarkdown: event.target.value }))} sx={{ mt: 2 }} inputProps={{ style: { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace' } }} />
-                : <Paper variant="outlined" aria-label="Markdown preview" sx={{ mt: 2, p: 3, minHeight: 400, overflowWrap: 'anywhere', '& pre': { overflowX: 'auto' }, '& img': { maxWidth: '100%' } }}>{draft.contentMarkdown ? <ReactMarkdown>{draft.contentMarkdown}</ReactMarkdown> : <Typography color="text.secondary">Nothing to preview yet.</Typography>}</Paper>}
+                : <Paper variant="outlined" aria-label="Markdown preview" sx={{ mt: 2, p: 3, minHeight: 400, overflowWrap: 'anywhere', '& pre': { overflowX: 'auto' }, '& img': { maxWidth: '100%' } }}>{draft.contentMarkdown ? <ReactMarkdown components={{ a: ({ href, title, children }) => <a href={href} title={title} target="_blank" rel="noopener noreferrer">{children}</a> }}>{draft.contentMarkdown}</ReactMarkdown> : <Typography color="text.secondary">Nothing to preview yet.</Typography>}</Paper>}
             </Box>
           </Stack>}
       </Box>

@@ -41,15 +41,20 @@ Article representation through `GET /api/articles/{id}` and does not cache knowl
 temporary index is necessary because the Milestone 1 HTTP contract has no collection endpoint.
 
 Article source is edited as an exact multiline string and previewed with `react-markdown`. Preview
-rendering neither normalizes nor replaces the source, and raw HTML is not enabled. Successful reads
-and saves adopt the server response, including its concurrency version. Editing and navigation are
+rendering neither normalizes nor replaces the source, and raw HTML is not enabled. Preview links
+open in a new tab, leaving the editor and its draft intact. Starting a new draft moves keyboard
+focus to Title. Successful reads and saves adopt the server response, including its concurrency
+version. Editing and navigation are
 disabled during saves; opening an Article temporarily disables editing and saving, and only the
 latest navigation request can update the editor. Opening any Article (including reloading the
 selected Article) or starting a new draft asks for discard confirmation when there are unsaved
 changes. Cancel keeps the draft so it can be saved before navigating.
 
-Startup tree results merge with Articles created while loading. Failed requests display an error
-and can be retried without reloading the page; successfully loaded Articles remain available.
+The tree loads at most four indexed Articles concurrently and displays each result as it arrives,
+merging with Articles created while loading. It tracks the number of remaining requests and
+times out each request after 15 seconds so stalled requests become retryable errors. Failed
+requests display an error and can be retried without reloading the page; successfully loaded
+Articles remain available.
 Retries request only the failed IDs, which stay in the browser index unless the server returns
 not found. Empty Markdown is accepted in both source and preview modes. A `409` preserves the
 draft and offers an explicit reload of the current server revision.

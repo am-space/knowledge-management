@@ -26,7 +26,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 beforeEach(() => localStorage.clear())
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
 
 test('creates, previews, and saves exact Markdown into the local tree', async () => {
   const markdown = '# Heading\n\n- one  \n- two\n'
@@ -459,4 +459,133 @@ test('keeps loaded articles and a draft while retrying only failed entries in a 
   expect(screen.getByRole('button', { name: 'Recovered article Revision 2' })).toBeInTheDocument()
   expect(screen.getByLabelText(/^Title/)).toHaveValue('Keep my draft')
   expect(fetchMock.mock.calls.slice(requestsBeforeRetry).map(([url]) => url)).toEqual(['/api/articles/failed-id'])
+})
+
+
+test('loads the tree incrementally with at most four concurrent requests', async () => {
+  const ids = Array.from({ length: 7 }, (_, index) => `indexed-${index}`)
+  localStorage.setItem('knowledge.localArticleIds', JSON.stringify(ids))
+  const pending = ids.map(() => deferredResponse())
+  let active = 0
+  let maxActive = 0
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    if (String(input) === '/health/ready') return jsonResponse({ status: 'Healthy', checks: [] })
+    const index = ids.findIndex((id) => String(input).endsWith(id))
+    active += 1
+    maxActive = Math.max(maxActive, active)
+    try { return await pending[index].promise } finally { active -= 1 }
+  })
+  const articleReads = () => fetchMock.mock.calls.filter(([url]) => String(url).startsWith('/api/articles/'))
+
+  await act(async () => { render(<App />) })
+  expect(articleReads()).toHaveLength(4)
+  expect(screen.getByText('Loading articles… (7 remaining)')).toBeInTheDocument()
+  await act(async () => pending[1].resolve(jsonResponse({ ...article(1, 'Loaded early'), id: ids[1] })))
+  expect(screen.getByRole('button', { name: 'Loaded early Revision 1' })).toBeInTheDocument()
+  expect(screen.getByText('Loading articles… (6 remaining)')).toBeInTheDocument()
+  expect(articleReads()).toHaveLength(5)
+
+  for (const index of [2, 3, 4, 5, 6, 0]) {
+    await act(async () => pending[index].resolve(jsonResponse({ ...article(1, `Article ${index}`), id: ids[index] })))
+  }
+  expect(maxActive).toBe(4)
+  expect(articleReads()).toHaveLength(7)
+  expect(screen.queryByText(/Loading articles…/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Article 0 Revision 1' })).toBeInTheDocument()
+})
+
+test('turns a stalled tree request into a retryable timeout without losing its ID', async () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  localStorage.setItem('knowledge.localArticleIds', JSON.stringify([articleId]))
+  let reads = 0
+  let requestSignal: AbortSignal | undefined
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (String(input) === '/health/ready') return jsonResponse({ status: 'Healthy', checks: [] })
+    if (++reads > 1) return jsonResponse(article(1))
+    requestSignal = init?.signal ?? undefined
+    return new Promise<Response>((_, reject) => {
+      requestSignal!.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+    })
+  })
+
+  await act(async () => { render(<App />) })
+  await act(async () => { await vi.advanceTimersByTimeAsync(15_000) })
+  expect(requestSignal?.aborted).toBe(true)
+  expect(screen.getByRole('alert')).toHaveTextContent('Loading this article timed out')
+  expect(screen.queryByText(/Loading articles…/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Retry loading articles' })).toBeEnabled()
+  expect(JSON.parse(localStorage.getItem('knowledge.localArticleIds')!)).toEqual([articleId])
+
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Retry loading articles' })))
+  expect(screen.getByRole('button', { name: 'First article Revision 1' })).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('aborts active tree requests and leaves queued requests unstarted on unmount', async () => {
+  localStorage.setItem('knowledge.localArticleIds', JSON.stringify(Array.from({ length: 6 }, (_, index) => `id-${index}`)))
+  const signals: AbortSignal[] = []
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (String(input) === '/health/ready') return jsonResponse({ status: 'Healthy', checks: [] })
+    const signal = init!.signal!
+    signals.push(signal)
+    return new Promise<Response>((_, reject) => {
+      signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+    })
+  })
+
+  const view = render(<App />)
+  expect(signals).toHaveLength(4)
+  await act(async () => view.unmount())
+  expect(signals).toHaveLength(4)
+  expect(signals.every((signal) => signal.aborted)).toBe(true)
+})
+
+test.each(['Create article', 'New'])('moves focus to Title when starting a draft with %s', async (buttonName) => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ status: 'Healthy', checks: [] }))
+  render(<App />)
+  const button = screen.getByRole('button', { name: buttonName })
+  button.focus()
+  fireEvent.click(button)
+  expect(screen.getByLabelText(/^Title/)).toHaveFocus()
+  const newButton = screen.getByRole('button', { name: 'New' })
+  newButton.focus()
+  fireEvent.click(newButton)
+  expect(screen.getByLabelText(/^Title/)).toHaveFocus()
+  await screen.findByText('Local workspace ready')
+})
+
+test('moves focus to Title when replacing an existing editor with a new draft', async () => {
+  localStorage.setItem('knowledge.localArticleIds', JSON.stringify([articleId]))
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => String(input) === '/health/ready'
+    ? jsonResponse({ status: 'Healthy', checks: [] }) : jsonResponse(article(1)))
+  render(<App />)
+  fireEvent.click(await screen.findByText('First article'))
+  await screen.findByDisplayValue('First article')
+  fireEvent.click(screen.getByRole('tab', { name: 'Preview' }))
+  const button = screen.getByRole('button', { name: 'New' })
+  button.focus()
+  fireEvent.click(button)
+  expect(screen.getByLabelText(/^Title/)).toHaveValue('')
+  expect(screen.getByLabelText(/^Title/)).toHaveFocus()
+})
+
+test('opens preview links in a separate tab while retaining the draft', async () => {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ status: 'Healthy', checks: [] }))
+  render(<App />)
+  fireEvent.click(screen.getByRole('button', { name: 'New' }))
+  fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Unsaved links' } })
+  const markdown = '[External](https://example.com) and [Local](/another-page)'
+  fireEvent.change(screen.getByLabelText(/^Markdown source/), { target: { value: markdown } })
+  fireEvent.click(screen.getByRole('tab', { name: 'Preview' }))
+  for (const [name, href] of [['External', 'https://example.com'], ['Local', '/another-page']]) {
+    const link = screen.getByRole('link', { name })
+    expect(link).toHaveAttribute('href', href)
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    fireEvent.click(link)
+  }
+  expect(screen.getByLabelText(/^Title/)).toHaveValue('Unsaved links')
+  fireEvent.click(screen.getByRole('tab', { name: 'Markdown source' }))
+  expect(screen.getByLabelText(/^Markdown source/)).toHaveValue(markdown)
+  await screen.findByText('Local workspace ready')
 })
