@@ -2,7 +2,7 @@
 
 Production code belongs under `src/`.
 
-- `Knowledge.Server` is the ASP.NET Core modular monolith and hosts HTTP and MCP adapters.
+- `Knowledge.Server` is the ASP.NET Core modular monolith and hosts Article HTTP operations; MCP adapters are planned.
 - `Knowledge.Web` is the React and TypeScript web client.
 
 Do not split Domain, Application, Infrastructure, and Presentation into separate assemblies merely

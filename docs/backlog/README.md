@@ -8,4 +8,4 @@ Promote an approved plan into the parent `docs/` directory with `git mv`, set it
 track its execution through a linked parent feature issue and sub-issues.
 
 - [`knowledge-core-mvp-plan.md`](knowledge-core-mvp-plan.md) — umbrella roadmap for the Knowledge
-  Core MVP; Milestone 0 is promoted into its own active plan
+  Core MVP; Milestones 0 and 1 have archived implementation plans

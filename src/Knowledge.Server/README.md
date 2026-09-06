@@ -1,30 +1,17 @@
 # Knowledge.Server
 
-The .NET 10 ASP.NET Core host currently exposes `/health/live`, `/health/ready`, and development
-OpenAPI metadata. SQLite is the default persistence profile; select PostgreSQL with
+The .NET 10 ASP.NET Core host exposes `/health/live`, `/health/ready`, Article create/read/update
+HTTP operations, and development OpenAPI metadata. SQLite is the default persistence profile; select PostgreSQL with
 `Persistence__Provider=PostgreSql` and provide `Persistence__PostgreSqlConnectionString`.
 
 ```bash
 dotnet run --project src/Knowledge.Server --urls http://localhost:5080
 ```
 
-The host is the entry point for the planned feature-oriented modular monolith.
+`Knowledge/` implements Article domain behavior, application services, and HTTP presentation.
+`Workspaces/` implements local identity and workspace bootstrap. Shared persistence and generated
+provider migrations live under `Infrastructure/Persistence/`. Remaining module and infrastructure
+README directories describe planned boundaries, not executable capabilities.
 
-```text
-Knowledge.Server/
-├── Modules/
-│   ├── Knowledge/
-│   ├── Workspaces/
-│   ├── Search/
-│   └── Consistency/
-├── Infrastructure/
-│   ├── Persistence/
-│   ├── AI/
-│   ├── Authentication/
-│   ├── BackgroundJobs/
-│   └── Observability/
-└── Common/
-```
-
-Each module may contain `Domain`, `Features`, `Presentation`, and `Infrastructure` folders as its
-implementation appears. Do not create empty architectural layers when a module does not need them.
+See [Article contracts](../../docs/knowledge-contracts.md) and
+[architecture](../../docs/architecture.md) for current behavior and deferred scope.

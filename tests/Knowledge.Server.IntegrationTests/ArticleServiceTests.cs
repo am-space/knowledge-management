@@ -113,6 +113,11 @@ public sealed class ArticleServiceTests
         database.Context.ChangeTracker.Clear();
         await database.CreatePointerFailureTriggerAsync();
 
+        await Assert.ThrowsAsync<DbUpdateException>(() => service.CreateAsync("Failed", "Failed"));
+        database.Context.ChangeTracker.Clear();
+        Assert.Equal(1, await database.Context.KnowledgeNodes.CountAsync());
+        Assert.Equal(1, await database.Context.KnowledgeRevisions.CountAsync());
+
         await Assert.ThrowsAnyAsync<DbException>(() => service.UpdateAsync(
             created.Article!.Id,
             1,

@@ -3,6 +3,7 @@ using Knowledge.Server.Workspaces.Features;
 using Knowledge.Server.Workspaces.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 
 namespace Knowledge.Server.Infrastructure.Persistence;
@@ -24,11 +25,13 @@ public static class PersistenceServiceCollectionExtensions
             var options = serviceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value;
             dbOptions.UseSqlite(
                 ResolveSqlitePath(options.SqliteConnectionString, contentRootPath));
+            ConfigurePrivateDiagnostics(dbOptions);
         });
         services.AddDbContext<PostgreSqlKnowledgeDbContext>((serviceProvider, dbOptions) =>
         {
             var options = serviceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value;
             dbOptions.UseNpgsql(options.PostgreSqlConnectionString);
+            ConfigurePrivateDiagnostics(dbOptions);
         });
         services.AddScoped<KnowledgeDbContext>(serviceProvider =>
         {
@@ -57,6 +60,16 @@ public static class PersistenceServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static void ConfigurePrivateDiagnostics(DbContextOptionsBuilder options)
+    {
+        // These EF events include raw provider exceptions, which can contain stored content.
+        // The Article boundary emits an error type and trace ID instead. Parameter values stay hidden.
+        options.EnableSensitiveDataLogging(false)
+            .ConfigureWarnings(warnings => warnings.Ignore(
+                CoreEventId.SaveChangesFailed,
+                CoreEventId.QueryIterationFailed));
     }
 
     private static string ResolveSqlitePath(string connectionString, string contentRootPath)

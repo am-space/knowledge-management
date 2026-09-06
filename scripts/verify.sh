@@ -32,11 +32,19 @@ verify_integration() {
     --no-build --logger "trx;LogFileName=integration-tests.trx"
 }
 
+verify_e2e() (
+  e2e_directory="$(mktemp -d)"
+  trap 'rm -rf "$e2e_directory"' EXIT
+  export KNOWLEDGE_E2E_DATABASE="$e2e_directory/knowledge.db"
+  npm test --prefix "$repository_root/tests/Knowledge.E2E.Tests"
+)
+
 case "$mode" in
   --all)
     verify_backend
     verify_frontend
     verify_integration
+    verify_e2e
     ;;
   --backend)
     verify_backend
@@ -48,8 +56,12 @@ case "$mode" in
     dotnet build "$repository_root/Knowledge.sln" --no-restore
     verify_integration
     ;;
+  --e2e)
+    dotnet build "$repository_root/Knowledge.sln" --no-restore
+    verify_e2e
+    ;;
   *)
-    echo "Usage: scripts/verify.sh [--all|--backend|--frontend|--integration]" >&2
+    echo "Usage: scripts/verify.sh [--all|--backend|--frontend|--integration|--e2e]" >&2
     exit 2
     ;;
 esac

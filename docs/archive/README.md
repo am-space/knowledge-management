@@ -6,3 +6,6 @@ reference documentation and accepted ADRs take precedence over archived plans.
 Archive a plan only after following the completion rules in
 [`work-tracking.md`](../work-tracking.md). Its banner should identify whether it was completed or
 superseded and link to the relevant issue, pull request, and ADRs.
+
+- [`milestone-0-foundation-plan.md`](milestone-0-foundation-plan.md) — foundation delivered by PR #3
+- [`milestone-1-article-plan.md`](milestone-1-article-plan.md) — Article workflow verified in PR #19

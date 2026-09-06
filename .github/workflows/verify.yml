@@ -68,10 +68,23 @@ jobs:
           global-json-file: global.json
           cache: true
           cache-dependency-path: '**/*.csproj'
-      - run: dotnet restore Knowledge.sln
-      - run: scripts/verify.sh --integration
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: |
+            src/Knowledge.Web/package-lock.json
+            tests/Knowledge.E2E.Tests/package-lock.json
+      - run: scripts/setup.sh
+      - run: npm run install-browser --prefix tests/Knowledge.E2E.Tests -- --with-deps
+      - run: scripts/verify.sh --all
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: integration-test-results
           path: '**/TestResults/*.trx'
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: tests/Knowledge.E2E.Tests/test-results/

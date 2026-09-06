@@ -12,7 +12,7 @@ material.
 | [`knowledge-contracts.md`](knowledge-contracts.md) | Knowledge application inputs, results, HTTP shapes, and errors |
 | [`local-mode.md`](local-mode.md) | SQLite local profile, capabilities, and limitations |
 | [`frontend.md`](frontend.md) | React and Material UI client direction |
-| [`testing.md`](testing.md) | Planned test topology and verification policy |
+| [`testing.md`](testing.md) | Executable coverage, verification commands, and remaining test boundaries |
 | [`work-tracking.md`](work-tracking.md) | GitHub Issue responsibilities, lifecycle, and relationship to repository plans |
 
 ## Architecture decision records
@@ -26,8 +26,7 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 
 ## Active plans
 
-- [`milestone-0-foundation-plan.md`](milestone-0-foundation-plan.md) — executable application,
-  verification, and persistence foundation
+No active implementation plans. GitHub Issues track delivery status through review and merge.
 
 ## Backlog plans
 
@@ -39,6 +38,11 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 - [`backlog/`](backlog/README.md) contains shaped multi-issue work without an implementation
   commitment.
 - [`archive/`](archive/README.md) contains completed or superseded plans retained for context.
+- [`milestone-0-foundation-plan.md`](archive/milestone-0-foundation-plan.md) — completed executable
+  foundation, retained as history
 - The root [`knowledge-management-system-design.md`](../knowledge-management-system-design.md) is the
   original design proposal. Accepted ADRs and the living reference documents above take precedence
   if the proposal becomes outdated.
+
+- [`milestone-1-article-plan.md`](archive/milestone-1-article-plan.md) — verified local revisioned
+  Article workflow, parent exit evidence, and completion record

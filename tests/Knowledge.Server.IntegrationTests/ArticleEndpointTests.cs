@@ -1,12 +1,15 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Knowledge.Server.Infrastructure.Persistence;
 using Knowledge.Server.Workspaces.Features;
+using Knowledge.Server.Workspaces.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -156,10 +159,30 @@ public sealed class ArticleEndpointTests
         var created = await ReadJsonAsync(createResponse);
         var id = created.RootElement.GetProperty("id").GetGuid();
 
+        var otherOwnerId = Guid.NewGuid();
+        var otherWorkspaceId = Guid.NewGuid();
+        await using (var scope = localFactory.Services.CreateAsyncScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            var now = DateTimeOffset.UtcNow;
+            database.AddRange(
+                new User(otherOwnerId, "Other owner", now),
+                new Workspace(otherWorkspaceId, "Other workspace", otherOwnerId, now),
+                new Membership(otherWorkspaceId, otherOwnerId, MembershipRole.Owner, now));
+            await database.SaveChangesAsync();
+        }
+
         await using var otherFactory = new ArticleApiFactory(
-            new FixedWorkspaceContext(Guid.NewGuid(), Guid.NewGuid()),
+            new FixedWorkspaceContext(otherWorkspaceId, otherOwnerId),
             localFactory.DatabasePath);
         using var otherClient = otherFactory.CreateClient();
+
+        var otherCreate = await otherClient.PostAsJsonAsync(
+            "/api/articles",
+            new { title = "Other private article", contentMarkdown = "Other secret" });
+        Assert.Equal(HttpStatusCode.Created, otherCreate.StatusCode);
+        var otherCreated = await ReadJsonAsync(otherCreate);
+        var otherId = otherCreated.RootElement.GetProperty("id").GetGuid();
 
         var readResponse = await otherClient.GetAsync($"/api/articles/{id:D}");
         await AssertProblemAsync(
@@ -174,6 +197,34 @@ public sealed class ArticleEndpointTests
             updateResponse,
             HttpStatusCode.NotFound,
             "urn:knowledge:problem:article-not-found");
+
+        var missingResponse = await otherClient.GetAsync($"/api/articles/{Guid.NewGuid():D}");
+        var missing = await ReadJsonAsync(missingResponse);
+        foreach (var response in new[] { readResponse, updateResponse })
+        {
+            var problem = await ReadJsonAsync(response);
+            Assert.Equal(
+                missing.RootElement.GetProperty("title").GetString(),
+                problem.RootElement.GetProperty("title").GetString());
+            Assert.Equal(
+                new[] { "status", "title", "traceId", "type" },
+                problem.RootElement.EnumerateObject().Select(property => property.Name).Order());
+        }
+
+        // Both persisted workspaces can access their own Article but not the other's.
+        var reverseRead = await localClient.GetAsync($"/api/articles/{otherId:D}");
+        Assert.Equal(HttpStatusCode.NotFound, reverseRead.StatusCode);
+        var reverseWrite = await localClient.PutAsJsonAsync(
+            $"/api/articles/{otherId:D}",
+            new { expectedRevisionVersion = 1, title = "Guessed", contentMarkdown = "Guessed" });
+        Assert.Equal(HttpStatusCode.NotFound, reverseWrite.StatusCode);
+        var unchanged = await ReadJsonAsync(await localClient.GetAsync($"/api/articles/{id:D}"));
+        Assert.Equal(created.RootElement.GetRawText(), unchanged.RootElement.GetRawText());
+        var otherUnchanged = await ReadJsonAsync(await otherClient.GetAsync($"/api/articles/{otherId:D}"));
+        Assert.Equal(otherCreated.RootElement.GetRawText(), otherUnchanged.RootElement.GetRawText());
+        await using var verificationScope = localFactory.Services.CreateAsyncScope();
+        var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+        Assert.Equal(2, await verificationDatabase.KnowledgeRevisions.CountAsync());
     }
 
     [Fact]
@@ -236,6 +287,60 @@ public sealed class ArticleEndpointTests
         Assert.Empty(await dbContext.KnowledgeRevisions.AsNoTracking().ToListAsync());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PersistenceFailure_RedactsLogsAndResponseAndRollsBack(bool failCreate)
+    {
+        const string privateContent = "PRIVATE-CONTENT-9f1c7e";
+        await using var factory = new ArticleApiFactory();
+        using var client = factory.CreateClient();
+        var created = await ReadJsonAsync(await client.PostAsJsonAsync(
+            "/api/articles",
+            new { title = privateContent, contentMarkdown = privateContent }));
+        var id = created.RootElement.GetProperty("id").GetGuid();
+        Assert.DoesNotContain(factory.Logs.Entries,
+            entry => entry.Contains(privateContent, StringComparison.Ordinal));
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+            // Database exception messages can contain stored data even with sensitive logging off.
+            await database.Database.ExecuteSqlRawAsync("""
+                CREATE TRIGGER FailPrivateArticleUpdate
+                BEFORE UPDATE OF "CurrentRevisionId" ON "KnowledgeNodes"
+                BEGIN
+                    SELECT RAISE(ABORT, 'PRIVATE-CONTENT-9f1c7e');
+                END;
+                """);
+        }
+
+        factory.Logs.Entries.Clear();
+        var response = failCreate
+            ? await client.PostAsJsonAsync(
+                "/api/articles", new { title = privateContent, contentMarkdown = privateContent })
+            : await client.PutAsJsonAsync(
+                $"/api/articles/{id:D}",
+                new { expectedRevisionVersion = 1, title = privateContent, contentMarkdown = privateContent });
+        var problem = await ReadJsonAsync(response);
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal(
+            new[] { "status", "title", "traceId", "type" },
+            problem.RootElement.EnumerateObject().Select(property => property.Name).Order());
+        Assert.DoesNotContain(privateContent, problem.RootElement.GetRawText(), StringComparison.Ordinal);
+        Assert.NotEmpty(factory.Logs.Entries);
+        Assert.DoesNotContain(factory.Logs.Entries,
+            entry => entry.Contains(privateContent, StringComparison.Ordinal));
+        Assert.Contains(factory.Logs.Entries,
+            entry => entry.Contains(problem.RootElement.GetProperty("traceId").GetString()!, StringComparison.Ordinal));
+
+        await using var verificationScope = factory.Services.CreateAsyncScope();
+        var verificationDatabase = verificationScope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
+        Assert.Equal(1, await verificationDatabase.KnowledgeRevisions.CountAsync());
+        Assert.Equal(1, await verificationDatabase.KnowledgeNodes.CountAsync());
+        var unchanged = await ReadJsonAsync(await client.GetAsync($"/api/articles/{id:D}"));
+        Assert.Equal(created.RootElement.GetRawText(), unchanged.RootElement.GetRawText());
+    }
+
     private static JsonElement CurrentRevision(JsonDocument document) =>
         document.RootElement.GetProperty("currentRevision");
 
@@ -251,6 +356,14 @@ public sealed class ArticleEndpointTests
         Assert.Equal((int)status, problem.RootElement.GetProperty("status").GetInt32());
         Assert.False(string.IsNullOrWhiteSpace(problem.RootElement.GetProperty("title").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(problem.RootElement.GetProperty("traceId").GetString()));
+        string[] allowedFields = type switch
+        {
+            "urn:knowledge:problem:validation" => ["errors", "status", "title", "traceId", "type"],
+            "urn:knowledge:problem:revision-conflict" => ["currentRevisionVersion", "status", "title", "traceId", "type"],
+            _ => ["status", "title", "traceId", "type"],
+        };
+        Assert.Equal(allowedFields,
+            problem.RootElement.EnumerateObject().Select(property => property.Name).Order());
         return problem;
     }
 
@@ -280,8 +393,11 @@ public sealed class ArticleEndpointTests
 
         public string DatabasePath { get; }
 
+        public CapturedLogs Logs { get; } = new();
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            builder.ConfigureLogging(logging => logging.AddProvider(Logs));
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
@@ -326,6 +442,26 @@ public sealed class ArticleEndpointTests
             builder.UseSetting(
                 "Persistence:PostgreSqlConnectionString",
                 "Host=127.0.0.1;Port=1;Database=unavailable;Username=none;Password=none;Timeout=1");
+        }
+    }
+
+    private sealed class CapturedLogs : ILoggerProvider
+    {
+        public ConcurrentQueue<string> Entries { get; } = new();
+
+        public ILogger CreateLogger(string categoryName) => new CaptureLogger(Entries);
+
+        public void Dispose() { }
+
+        private sealed class CaptureLogger(ConcurrentQueue<string> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+                Exception? exception, Func<TState, Exception?, string> formatter) =>
+                entries.Enqueue($"{formatter(state, exception)} {exception}");
         }
     }
 

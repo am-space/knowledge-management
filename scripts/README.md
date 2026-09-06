@@ -1,6 +1,7 @@
 # Scripts
 
-`setup.sh` restores .NET packages and installs the locked frontend dependencies. `verify.sh` is the
+`setup.sh` restores .NET packages, installs the locked frontend and browser-test dependencies, and
+downloads Playwright's Chromium headless shell. `verify.sh` is the
 canonical local and CI verification entry point. Setup also restores the repository-local EF Core
 CLI used to generate migrations.
 
@@ -9,9 +10,11 @@ scripts/setup.sh
 scripts/verify.sh --all
 ```
 
-Use `--backend`, `--frontend`, or `--integration` for a focused lane. PostgreSQL integration tests
+Use `--backend`, `--frontend`, `--integration`, or `--e2e` for a focused lane. PostgreSQL integration tests
 use `KNOWLEDGE_TEST_POSTGRES` when supplied; otherwise they require Docker Compose and start the
-repository's PostgreSQL service.
+repository's PostgreSQL service. The browser lane uses dedicated loopback ports 5081/5174
+and a temporary SQLite file, and cleans up after itself. See [testing](../docs/testing.md) for
+browser system dependencies, failure artifacts, and coverage.
 
 Generate migrations independently for each provider context:
 

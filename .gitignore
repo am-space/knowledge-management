@@ -4,6 +4,8 @@
 TestResults/
 *.trx
 coverage/
+test-results/
+playwright-report/
 
 # Node and Vite
 node_modules/

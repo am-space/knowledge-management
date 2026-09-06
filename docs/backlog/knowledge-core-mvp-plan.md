@@ -25,16 +25,17 @@ automatic knowledge maintenance remain later capabilities built on top of this f
 
 ## Milestone roadmap
 
-| Milestone | Outcome | Status |
+| Milestone | Outcome | Scope reference |
 | --- | --- | --- |
-| [Milestone 0](../milestone-0-foundation-plan.md) | Executable application, verification, and persistence foundation | Active |
-| Milestone 1 | First local vertical slice: personal workspace and revisioned article editing | Backlog |
-| Milestone 2 | Useful knowledge core: hierarchy, relations, revisions, and keyword search | Backlog |
-| Milestone 3 | Complete human and agent surfaces: web workspace, HTTP, MCP, and portability | Backlog |
-| Milestone 4 | Hosted multi-user profile with authentication, membership, and deployment | Backlog |
+| Milestone 0 | Executable application, verification, and persistence foundation | [Archived plan](../archive/milestone-0-foundation-plan.md) |
+| Milestone 1 | First local vertical slice: personal workspace and revisioned article editing | [Archived plan](../archive/milestone-1-article-plan.md) |
+| Milestone 2 | Useful knowledge core: hierarchy, relations, revisions, and keyword search | This roadmap |
+| Milestone 3 | Complete human and agent surfaces: web workspace, HTTP, MCP, and portability | This roadmap |
+| Milestone 4 | Hosted multi-user profile with authentication, membership, and deployment | This roadmap |
 
-Milestones are delivery boundaries, not separate architectures. Each completed milestone must leave
-the repository in a verified and usable state.
+GitHub milestones and issues track delivery status. This backlog roadmap retains future scope;
+Milestone 1 has its own archived implementation plan. Milestones are delivery boundaries, not separate
+architectures. Each completed milestone must leave the repository in a verified and usable state.
 
 ## Milestone 0 — Executable foundation
 
@@ -42,10 +43,14 @@ Create the .NET solution, ASP.NET Core host, React client, test projects, canoni
 SQLite local configuration, PostgreSQL development configuration, and a minimal end-to-end health
 path. Do not introduce knowledge-domain placeholders or empty database migrations.
 
-Exit criteria are defined in the active
-[Milestone 0 foundation plan](../milestone-0-foundation-plan.md).
+Exit criteria are retained in the archived
+[Milestone 0 foundation plan](../archive/milestone-0-foundation-plan.md).
 
 ## Milestone 1 — First vertical slice
+
+Approved scope, sequencing, and exit evidence are in the
+[Milestone 1 Article plan](../archive/milestone-1-article-plan.md), for
+[parent issue #5](https://github.com/am-space/knowledge-management/issues/5).
 
 ### Outcome
 

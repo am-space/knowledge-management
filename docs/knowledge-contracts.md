@@ -70,7 +70,7 @@ one of the statuses above, an Article on success, field errors for validation fa
 current version for a revision conflict. HTTP and future MCP adapters map that result without
 reimplementing workspace, revision, or concurrency behavior.
 
-Titles and Markdown are required strings. A title containing only whitespace is invalid, and a
+Titles and Markdown are required, non-null strings. Markdown may be empty. A title containing only whitespace is invalid, and a
 title cannot exceed 500 characters after surrounding whitespace is removed. Unknown or unsupported
 node types are not treated as Articles.
 
@@ -121,6 +121,19 @@ context, which remains `404` to avoid cross-workspace disclosure.
 
 Unexpected failures use a generic `500` Problem Details response without knowledge content,
 credentials, database details, or exception text.
+
+## Diagnostic allowlist
+
+Article error logs contain a fixed event message, request trace ID, and exception type name.
+They omit exception objects, messages, stacks, request bodies, titles, and Markdown. EF Core
+sensitive-data logging is disabled, and its save-failure and query-iteration-failure events are
+suppressed because they include raw provider exceptions even when parameter logging is disabled.
+SQL command diagnostics retain parameter placeholders; the Article middleware supplies the safe
+correlated error event. The generic `500` body contains only `type`, `title`, `status`, and `traceId`.
+Other problem bodies add only the documented validation fields or current revision version.
+
+These guarantees cover the shipped Article request path. Hosted authentication, future request/body
+logging, and additional diagnostics require their own privacy review before being enabled.
 
 ## Compatibility guidance
 
