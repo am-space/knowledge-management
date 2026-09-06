@@ -26,7 +26,8 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 
 ## Active plans
 
-No active implementation plans. GitHub Issues track delivery status through review and merge.
+- [`milestone-2-navigation-workspaces-plan.md`](milestone-2-navigation-workspaces-plan.md) — reliable
+  server-backed Article navigation and local personal workspaces
 
 ## Backlog plans
 
