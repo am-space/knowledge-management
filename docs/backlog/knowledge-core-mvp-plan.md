@@ -29,13 +29,13 @@ automatic knowledge maintenance remain later capabilities built on top of this f
 | --- | --- | --- |
 | Milestone 0 | Executable application, verification, and persistence foundation | [Archived plan](../archive/milestone-0-foundation-plan.md) |
 | Milestone 1 | First local vertical slice: personal workspace and revisioned article editing | [Archived plan](../archive/milestone-1-article-plan.md) |
-| Milestone 2 | Useful knowledge core: hierarchy, relations, revisions, and keyword search | This roadmap |
+| Milestone 2 | Reliable local navigation and personal workspaces | [Active plan](../milestone-2-navigation-workspaces-plan.md) |
 | Milestone 3 | Complete human and agent surfaces: web workspace, HTTP, MCP, and portability | This roadmap |
 | Milestone 4 | Hosted multi-user profile with authentication, membership, and deployment | This roadmap |
 
 GitHub milestones and issues track delivery status. This backlog roadmap retains future scope;
-Milestone 1 has its own archived implementation plan. Milestones are delivery boundaries, not separate
-architectures. Each completed milestone must leave the repository in a verified and usable state.
+Milestone 1 has its own archived implementation plan; Milestone 2 has an active delivery plan.
+Milestones are delivery boundaries, not separate architectures. Each completed milestone must leave the repository in a verified and usable state.
 
 ## Milestone 0 — Executable foundation
 
@@ -75,61 +75,49 @@ article, edit its Markdown, save an immutable revision, and reopen it from the k
 - A second workspace cannot read or modify the first workspace's node.
 - Failed or conflicting updates do not create partial revisions.
 
-## Milestone 2 — Useful knowledge core
+## Milestone 2 — Reliable local navigation and workspaces
 
-### Workspaces
+Approved scope and exit criteria are in the
+[active Milestone 2 plan](../milestone-2-navigation-workspaces-plan.md).
 
-- Create, list, select, and rename workspaces.
-- Model owner, editor, and viewer memberships.
-- Enforce workspace scope in hierarchy, relation, revision, and search queries.
-- Defer invitations and organizations.
+- List saved Articles from the server, including roots and children, without browser-local IDs.
+- Create Articles at the root or beneath an existing Article and expand/collapse the tree.
+- Create, list, rename, and switch personal workspaces owned by the trusted local owner.
+- Preserve unsaved drafts across navigation decisions and enforce workspace isolation.
+- Verify fresh-browser discovery, cleared-storage recovery, and nested navigation after reload.
+- Preserve equivalent application and persistence behavior on SQLite and PostgreSQL; hosted HTTP
+  access remains denied until hosted authentication is implemented.
 
-### Knowledge hierarchy
+Membership management, sharing, hierarchy moves, archive/restore, revision history UI and restoration,
+relations, and search are excluded.
 
-- Create articles beneath a parent.
-- List ancestors and children.
-- Move articles within a workspace.
-- Archive and restore articles.
-- Reject self-parenting, hierarchy cycles, cross-workspace parents, and edits to archived nodes.
+## Deferred knowledge-core scope — schedule after Milestone 2
 
-### Revision history
+The following scope is retained in backlog without implementation issues or a new milestone
+commitment. Shape its delivery boundary before starting it; Milestone 3 surfaces that depend on these
+capabilities cannot be completed until the relevant core behavior is delivered.
 
-- List and view historical revisions.
-- Display author, source, timestamp, and version metadata.
-- Restore old content by creating a new current revision rather than mutating history.
-- Define and implement audit behavior for moves, status transitions, and relation changes before
-  those operations ship.
+- Hierarchy moves and ancestor listing; reject self-parenting, cycles, and cross-workspace parents.
+- Archive and restore Articles; reject edits to archived nodes and define archived-tree behavior.
+- List and view historical revisions with author, source, timestamp, and version metadata.
+- Restore historical content by appending a new revision.
+- Define audit/version semantics before shipping moves, status transitions, or relation changes.
+- Create/remove and list incoming/outgoing `relates_to`, `depends_on`, and `supersedes` relations;
+  reject invalid, duplicate, inappropriate self-, and cross-workspace relations.
+- Display related knowledge in a contextual panel.
+- Search titles and Markdown in the active workspace using SQLite FTS5 and PostgreSQL full-text
+  search, with explicit archive filtering, exact revision identity, excerpts, stable metadata, and
+  deterministic ordering for equal ranks.
+- Verify these behaviors on both providers, expose usable HTTP and basic web workflows with exact
+  contract tests, and cover loading, empty, error, authorization, and conflict states.
 
-### Relations
-
-Start with three relation types:
-
-```text
-relates_to
-depends_on
-supersedes
-```
-
-- Create and remove relations.
-- List incoming and outgoing relations.
-- Reject invalid, duplicate, inappropriate self-, and cross-workspace relations.
-- Display related knowledge in the contextual side panel.
-
-### Keyword search
-
-- Search titles and Markdown content within the active workspace.
-- Use SQLite FTS5 locally and PostgreSQL full-text search on the server.
-- Filter archived content explicitly.
-- Return the matching node, revision identity, excerpt, and stable result metadata.
-- Keep result ordering deterministic for equal ranks.
-
-### Exit criteria
-
-- Hierarchy, revision, relation, and search behavior is covered on both database providers.
-- The web client exposes complete loading, empty, error, authorization, and conflict states.
-- Public HTTP contracts have exact contract tests.
+Membership management and owner/editor/viewer authorization remain in Milestone 4. Local workspace
+ownership in Milestone 2 does not introduce sharing, invitations, or hosted authentication.
 
 ## Milestone 3 — Human and agent surfaces
+
+These surfaces build on delivered core operations. Basic HTTP and web workflows ship with each
+core feature; this milestone completes the richer experience, agent access, and portability.
 
 ### Web workspace
 
@@ -230,15 +218,16 @@ workspace-scoped persistence queries are required regardless of whether RLS is l
 ## Decisions required before affected milestones
 
 - Authentication provider and account lifecycle before Milestone 4.
-- Audit/version semantics for hierarchy, status, and relation changes before Milestone 2.
+- Audit/version semantics before deferred hierarchy moves, status transitions, and relation changes.
 - Markdown editor dependency before the complete Milestone 3 editor experience.
 - Import conflict and trust model before portability ships.
 - Whether local semantic search is valuable enough to select a vector implementation after the MVP.
 
 ## Definition of MVP done
 
-The MVP is complete when Milestones 0 through 4 meet their exit criteria, the same knowledge model is
-usable through local SQLite and hosted PostgreSQL profiles, core human and MCP workflows are verified,
+The MVP is complete when Milestones 0 through 4 and the deferred knowledge-core scope meet their exit
+criteria, the same knowledge model is usable through local SQLite and hosted PostgreSQL profiles,
+core human and MCP workflows are verified,
 documentation reflects the resulting behavior, and deferred AI/vector/synchronization features are
 not required for normal knowledge work.
 
