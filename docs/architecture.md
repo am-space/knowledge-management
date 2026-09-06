@@ -3,21 +3,18 @@
 ## System shape
 
 The application is a feature-oriented modular monolith implemented with .NET 10 and ASP.NET Core. It
-serves a React web client and exposes the same application behavior through HTTP and MCP adapters.
+exposes the local Article application service through HTTP to a React web client. During development,
+Vite serves the client and proxies HTTP requests. MCP and production client hosting are deferred.
 
-```text
-React client ── HTTP ──┐
-                       v
-AI agents ── HTTP/MCP ─> Presentation adapters
-                               |
-                               v
-                        Features / Application
-                               |
-                               v
-                             Domain
-                               ^
-                               |
-                     Infrastructure adapters
+```mermaid
+flowchart TD
+    Web["React editor and preview"] --> Http["Article HTTP adapter"]
+    Http --> Service["ArticleService"]
+    Context["Trusted workspace context"] --> Service
+    Service --> Domain["Nodes and immutable revisions"]
+    Service --> Persistence["EF Core persistence"]
+    Persistence --> SQLite["SQLite local profile"]
+    Persistence --> PostgreSQL["PostgreSQL provider"]
 ```
 
 The planned modules are:
@@ -28,8 +25,8 @@ The planned modules are:
 - **Consistency:** impact analysis, deterministic validation, semantic analysis, reports, and
   proposed changes.
 
-Shared infrastructure provides relational persistence, AI providers, authentication, background
-execution, and observability.
+Shared infrastructure currently provides relational persistence and health checks. AI providers,
+hosted authentication, and background execution remain planned boundaries.
 
 ## Dependency rules
 
@@ -48,16 +45,19 @@ lifecycle of its own.
 The same application supports two persistence profiles:
 
 - **Local:** single process, SQLite file, normally one automatically created personal workspace.
-- **Server:** hosted multi-user deployment, PostgreSQL, Docker, `pgvector`, and optional `ltree`.
+- **Server:** PostgreSQL persistence is implemented and tested; hosted authentication, multi-user
+  deployment, `pgvector`, and optional `ltree` are planned. Article HTTP calls fail closed with `403`
+  until the host supplies a trusted workspace resolver.
 
 Both profiles preserve stable identifiers, revision behavior, workspace ownership, use cases, and
-HTTP/MCP contracts. Provider-specific capabilities are explicit; local mode does not claim support
-for semantic vector search until a local vector implementation is selected.
+Article application contracts, with MCP planned as another adapter. Provider-specific capabilities
+are explicit; local mode does not claim semantic vector search until an implementation is selected.
 
-Local mode is not an offline replica of the server profile. Export/import provides initial
-portability. Synchronization and cross-database conflict resolution require a separate decision.
+Local mode is not an offline replica of the server profile. Export/import is planned for initial
+portability and is not yet implemented. Synchronization and cross-database conflict resolution
+require a separate decision.
 
-## Knowledge rules
+## Knowledge rules and planned extensions
 
 - A knowledge node has stable identity; content edits create immutable revisions.
 - The parent relationship is the portable hierarchy source of truth.

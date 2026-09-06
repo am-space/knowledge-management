@@ -1,9 +1,18 @@
 # Milestone 0 — Executable Foundation Plan
 
-- **Status:** Active
+- **Status:** Completed
 - **Date:** 2026-08-30
-- **Parent:** [Knowledge Core MVP Plan](backlog/knowledge-core-mvp-plan.md)
+- **Parent:** [Knowledge Core MVP Plan](../backlog/knowledge-core-mvp-plan.md)
 - **Owner:** Project maintainers
+
+> Completed by [PR #3](https://github.com/am-space/knowledge-management/pull/3), whose
+> backend, frontend, and integration CI checks passed. This historical plan predates the repository's
+> GitHub Issue lifecycle and has no parent issue. It belongs to the
+> [Knowledge Core MVP roadmap](../backlog/knowledge-core-mvp-plan.md); accepted decisions are
+> [ADR-0001](../adr/0001-feature-oriented-modular-monolith.md),
+> [ADR-0002](../adr/0002-postgresql-server-and-sqlite-local-profiles.md), and
+> [ADR-0003](../adr/0003-react-and-material-ui-web-client.md).
+> Current behavior, including the later Article workflow, is described in the living references.
 
 ## Goal
 
@@ -47,11 +56,11 @@ The first provider-specific migrations belong to Milestone 1 with the first real
 
 ## Existing decisions
 
-- [ADR-0001](adr/0001-feature-oriented-modular-monolith.md): one feature-oriented ASP.NET Core
+- [ADR-0001](../adr/0001-feature-oriented-modular-monolith.md): one feature-oriented ASP.NET Core
   modular monolith.
-- [ADR-0002](adr/0002-postgresql-server-and-sqlite-local-profiles.md): PostgreSQL server and SQLite
+- [ADR-0002](../adr/0002-postgresql-server-and-sqlite-local-profiles.md): PostgreSQL server and SQLite
   local persistence profiles.
-- [ADR-0003](adr/0003-react-and-material-ui-web-client.md): React, TypeScript, Vite, and Material UI.
+- [ADR-0003](../adr/0003-react-and-material-ui-web-client.md): React, TypeScript, Vite, and Material UI.
 - Production code lives under `src/`; .NET verification projects live under `tests/`.
 - The repository uses `master` as its pull-request base and task-specific feature branches.
 
@@ -278,5 +287,5 @@ Milestone 0 is complete only when every acceptance criterion is satisfied, the c
 verification passes locally and in CI, both persistence profiles are proven without placeholder
 schema, the final diff contains no generated or sensitive files, and the documentation describes the
 foundation as it actually exists. In the implementation pull request, record any newly durable
-decision in an ADR and archive this plan according to [`docs/AGENTS.md`](AGENTS.md).
+decision in an ADR and archive this plan according to [`docs/AGENTS.md`](../AGENTS.md).
 

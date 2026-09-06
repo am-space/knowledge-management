@@ -3,7 +3,8 @@
 The React, TypeScript, Vite, and Material UI client provides the local Article workflow. A user can
 create and reopen Articles from a browser-local knowledge tree, edit exact Markdown, preview it,
 and save revisioned changes through the typed HTTP client. During development, Vite proxies
-`/health` and `/api` to `http://localhost:5080`.
+`/health` and `/api` to `http://localhost:5080`. `KNOWLEDGE_API_PROXY_TARGET` overrides the
+development proxy for isolated browser verification.
 
 ```bash
 npm run dev --prefix src/Knowledge.Web

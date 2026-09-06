@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/health': 'http://localhost:5080',
-      '/api': 'http://localhost:5080',
+      '/health': process.env.KNOWLEDGE_API_PROXY_TARGET ?? 'http://localhost:5080',
+      '/api': process.env.KNOWLEDGE_API_PROXY_TARGET ?? 'http://localhost:5080',
     },
   },
   test: {

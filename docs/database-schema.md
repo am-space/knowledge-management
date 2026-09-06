@@ -58,7 +58,8 @@ CreatedBy
 ```
 
 The node carries stable identity and current structural state. A node cannot be its own parent;
-hierarchy cycles and cross-workspace parents are invalid.
+hierarchy cycles and cross-workspace parents must be rejected when hierarchy operations ship.
+Milestone 1 has no hierarchy operations: Articles are roots, and `ParentId` remains null.
 
 ### KnowledgeRevision
 
@@ -108,7 +109,7 @@ Future records include embeddings, change sets, consistency reports, and consist
 derived artifact must include the source revision identity and workspace scope needed to reject stale
 or cross-workspace results.
 
-## Provider behavior
+## Provider behavior and planned capabilities
 
 | Capability | PostgreSQL server | SQLite local |
 | --- | --- | --- |
@@ -118,6 +119,12 @@ or cross-workspace results.
 | Vector search | `pgvector` | Unavailable until explicitly implemented |
 | Tenant isolation | Application checks; possible future RLS | Application checks in a single-process profile |
 | Migrations | `PostgreSqlKnowledgeDbContext` history | `SqliteKnowledgeDbContext` history |
+
+Hierarchy traversal, relations, keyword search, and vector search in this table are planned, not
+shipped capabilities. Migration tests apply both provider histories to empty databases, reject model
+drift, and exercise cross-workspace revision and current-pointer constraints. The database itself
+does not provide read authorization or PostgreSQL row-level security; application queries carry
+explicit workspace predicates.
 
 Database constraints and indexes must reinforce domain invariants on both providers. PostgreSQL must
 not be reduced to SQLite's lowest common denominator.

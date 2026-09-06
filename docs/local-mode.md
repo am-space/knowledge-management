@@ -29,13 +29,18 @@ dotnet run --project src/Knowledge.Server --urls http://localhost:5080
 The Compose credentials are development-only defaults and can be overridden through the variables
 shown in `.env.example`.
 
-## Intended experience
+## Available experience
 
 - Start one application process without requiring PostgreSQL or Docker.
 - Store knowledge in one configurable SQLite database file.
 - Automatically create or select a personal workspace.
-- Expose the same web, HTTP, and MCP behavior available in server mode where supported.
-- Allow explicit export and import for backup and portability.
+- Create, reopen, edit, preview, and save Articles through the web client and HTTP.
+- Preserve immutable revisions and report stale saves as conflicts.
+
+MCP, export/import, and hosted authentication are not yet available. Start the web client separately
+with `npm run dev --prefix src/Knowledge.Web`; the server does not host its production assets yet.
+The tree is a browser-local index of Article IDs, not a server collection. Clearing browser storage
+removes navigation entries without deleting server content; see [frontend](frontend.md).
 
 ## Local identity and workspace resolution
 
@@ -59,14 +64,14 @@ needed by the future authenticated server profile. See
 
 ## Preserved semantics
 
-Local mode retains users where authentication requires them, workspaces, memberships, stable
-knowledge-node IDs, immutable revisions, structured relations, and workspace IDs. It must not use a
+Local mode retains users, workspaces, memberships, stable knowledge-node IDs, immutable revisions,
+and workspace IDs. Structured relations remain planned. It must not use a
 simplified local-only domain model.
 
 ## Search capabilities
 
-SQLite FTS5 provides local keyword search. Recursive CTEs provide hierarchy traversal. Graph
-relations use ordinary indexed relational tables.
+Keyword search, hierarchy traversal, and graph relations are not implemented. The planned local
+implementations are SQLite FTS5, recursive CTEs, and indexed relational tables respectively.
 
 Local vector search is not part of the accepted initial profile. The application must expose search
 capabilities explicitly so callers can omit semantic similarity when it is unavailable. A local

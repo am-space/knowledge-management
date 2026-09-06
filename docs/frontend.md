@@ -63,6 +63,14 @@ Browser index persistence failures display a separate warning without treating s
 writes as failed saves. The current session retains the saved Article and revision, but the tree
 may be incomplete after reloading if browser storage is unavailable.
 
+## Browser verification
+
+`scripts/verify.sh --e2e` runs Chromium against the actual Vite client, ASP.NET Core server, and an
+isolated temporary SQLite database. It covers create, exact source/preview round trips, browser
+reload and tree reopening, revision saves, a real concurrent writer, conflict draft preservation,
+discard cancellation, and a cleared Markdown body. Component tests retain focused asynchronous
+loading, navigation, storage-failure, and accessibility coverage.
+
 ## Client boundaries
 
 - Business invariants and workspace authorization remain on the server.

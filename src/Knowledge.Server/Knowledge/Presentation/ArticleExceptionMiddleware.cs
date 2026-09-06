@@ -29,7 +29,10 @@ public sealed class ArticleExceptionMiddleware(
         }
         catch (BadHttpRequestException exception)
         {
-            logger.LogInformation(exception, "The Article request body could not be read.");
+            logger.LogInformation(
+                "The Article request body could not be read. TraceId: {TraceId}; ErrorType: {ErrorType}.",
+                context.TraceIdentifier,
+                exception.GetType().Name);
             if (context.Response.HasStarted)
             {
                 throw;
@@ -49,7 +52,11 @@ public sealed class ArticleExceptionMiddleware(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "An unexpected error occurred while processing an Article request.");
+            // Provider and parser exception messages can contain private content.
+            logger.LogError(
+                "An unexpected error occurred while processing an Article request. TraceId: {TraceId}; ErrorType: {ErrorType}.",
+                context.TraceIdentifier,
+                exception.GetType().Name);
             if (context.Response.HasStarted)
             {
                 throw;

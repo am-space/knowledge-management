@@ -4,9 +4,11 @@ This file provides repository-wide guidance to Codex when working in this reposi
 
 ## Project status
 
-This repository has an executable Milestone 0 foundation. It includes the ASP.NET Core server,
-React client, SQLite and PostgreSQL persistence profiles, focused tests, canonical scripts, and CI.
-Knowledge-domain behavior and the first database migrations begin in Milestone 1.
+This repository implements the Milestone 1 local Article workflow: personal workspace bootstrap,
+immutable revisions, HTTP operations, and the React Markdown editor and preview. SQLite and
+PostgreSQL have generated migrations and provider tests. Browser verification runs the local
+workflow against SQLite; hosted authentication, hierarchy operations, search, relations, and MCP
+remain future work.
 
 Start with [`docs/README.md`](docs/README.md). Accepted decisions live in `docs/adr/`, and living
 reference pages describe the current direction. The root
@@ -22,8 +24,8 @@ npm run dev --prefix src/Knowledge.Web
 scripts/verify.sh --all
 ```
 
-Focused verification is available through `scripts/verify.sh --backend`, `--frontend`, and
-`--integration`. PostgreSQL development uses `docker compose up --detach --wait postgres`.
+Focused verification is available through `scripts/verify.sh --backend`, `--frontend`,
+`--integration`, and `--e2e`. PostgreSQL development uses `docker compose up --detach --wait postgres`.
 
 ## Product overview
 

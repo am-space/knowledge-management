@@ -110,6 +110,9 @@ public sealed class KnowledgeMigrationTests
     {
         await context.Database.MigrateAsync();
         Assert.NotEmpty(await context.Database.GetAppliedMigrationsAsync());
+        Assert.Empty(await context.Database.GetPendingMigrationsAsync());
+        Assert.False(context.Database.HasPendingModelChanges());
+        await context.Database.MigrateAsync();
 
         var now = DateTimeOffset.UtcNow;
         var owner = new User(Guid.NewGuid(), "Local owner", now);
@@ -146,6 +149,21 @@ public sealed class KnowledgeMigrationTests
             VALUES
                 ({{Guid.NewGuid()}}, {{otherWorkspace.Id}}, {{node.Id}}, 2, 'Cross workspace', 'Invalid', {{now}}, {{owner.Id}})
             """));
+
+        // Workspace filters protect reads; relational constraints also reject a cross-workspace pointer.
+        var foreignNode = KnowledgeNode.CreateArticle(
+            Guid.NewGuid(), otherWorkspace.Id, Guid.NewGuid(), "Foreign", "Private", owner.Id, now);
+        context.Add(foreignNode);
+        await context.SaveChangesAsync();
+        await Assert.ThrowsAnyAsync<DbException>(() => context.Database.ExecuteSqlInterpolatedAsync($$"""
+            UPDATE "KnowledgeNodes"
+            SET "CurrentRevisionId" = {{foreignNode.CurrentRevisionId}}
+            WHERE "Id" = {{node.Id}} AND "WorkspaceId" = {{workspace.Id}}
+            """));
+        Assert.Equal(node.CurrentRevisionId, await context.KnowledgeNodes
+            .Where(candidate => candidate.Id == node.Id && candidate.WorkspaceId == workspace.Id)
+            .Select(candidate => candidate.CurrentRevisionId)
+            .SingleAsync());
 
         var otherNode = KnowledgeNode.CreateArticle(
             Guid.NewGuid(),
