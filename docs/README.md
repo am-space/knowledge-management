@@ -26,8 +26,7 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 
 ## Active plans
 
-- [`milestone-1-article-plan.md`](milestone-1-article-plan.md) — local revisioned Article scope,
-  verification evidence, and delivery exit criteria
+No active implementation plans. GitHub Issues track delivery status through review and merge.
 
 ## Backlog plans
 
@@ -44,3 +43,6 @@ Start new decisions from [`adr/template.md`](adr/template.md).
 - The root [`knowledge-management-system-design.md`](../knowledge-management-system-design.md) is the
   original design proposal. Accepted ADRs and the living reference documents above take precedence
   if the proposal becomes outdated.
+
+- [`milestone-1-article-plan.md`](archive/milestone-1-article-plan.md) — verified local revisioned
+  Article workflow, parent exit evidence, and completion record

@@ -28,13 +28,13 @@ automatic knowledge maintenance remain later capabilities built on top of this f
 | Milestone | Outcome | Scope reference |
 | --- | --- | --- |
 | Milestone 0 | Executable application, verification, and persistence foundation | [Archived plan](../archive/milestone-0-foundation-plan.md) |
-| Milestone 1 | First local vertical slice: personal workspace and revisioned article editing | [Delivery plan](../milestone-1-article-plan.md) |
+| Milestone 1 | First local vertical slice: personal workspace and revisioned article editing | [Archived plan](../archive/milestone-1-article-plan.md) |
 | Milestone 2 | Useful knowledge core: hierarchy, relations, revisions, and keyword search | This roadmap |
 | Milestone 3 | Complete human and agent surfaces: web workspace, HTTP, MCP, and portability | This roadmap |
 | Milestone 4 | Hosted multi-user profile with authentication, membership, and deployment | This roadmap |
 
 GitHub milestones and issues track delivery status. This backlog roadmap retains future scope;
-Milestone 1 has its own approved delivery plan. Milestones are delivery boundaries, not separate
+Milestone 1 has its own archived implementation plan. Milestones are delivery boundaries, not separate
 architectures. Each completed milestone must leave the repository in a verified and usable state.
 
 ## Milestone 0 — Executable foundation
@@ -49,7 +49,7 @@ Exit criteria are retained in the archived
 ## Milestone 1 — First vertical slice
 
 Approved scope, sequencing, and exit evidence are in the
-[Milestone 1 Article plan](../milestone-1-article-plan.md), for
+[Milestone 1 Article plan](../archive/milestone-1-article-plan.md), for
 [parent issue #5](https://github.com/am-space/knowledge-management/issues/5).
 
 ### Outcome

@@ -1,9 +1,18 @@
 # Milestone 1 — Local Article delivery plan
 
-- **Status:** Active
+- **Status:** Completed
 - **Parent outcome:** [Issue #5](https://github.com/am-space/knowledge-management/issues/5)
-- **Roadmap:** [Knowledge Core MVP](backlog/knowledge-core-mvp-plan.md)
+- **Roadmap:** [Knowledge Core MVP](../backlog/knowledge-core-mvp-plan.md)
 - **Verification and delivery:** [Issue #12](https://github.com/am-space/knowledge-management/issues/12)
+
+> Implementation and verification completed in [PR #19](https://github.com/am-space/knowledge-management/pull/19)
+> for [parent issue #5](https://github.com/am-space/knowledge-management/issues/5) and
+> [verification issue #12](https://github.com/am-space/knowledge-management/issues/12).
+> `scripts/verify.sh --all` passed locally and in
+> [CI](https://github.com/am-space/knowledge-management/actions/runs/34029753147):
+> 21 unit, 35 frontend, 30 provider/HTTP integration, and 1 Chromium test.
+> This completion archive is part of the completing PR; issue closure follows its merge.
+> Accepted decisions are linked below. Later MVP milestones remain in the backlog roadmap.
 
 ## Scope and outcome
 
@@ -21,10 +30,10 @@ constraints. Local bootstrap supplies trusted identities. The Article service ow
 create/update and concurrency behavior; HTTP maps its results and React consumes that contract.
 Final verification crosses browser, HTTP, application, and persistence boundaries.
 
-The accepted decisions are [ADR-0001](adr/0001-feature-oriented-modular-monolith.md),
-[ADR-0002](adr/0002-postgresql-server-and-sqlite-local-profiles.md),
-[ADR-0003](adr/0003-react-and-material-ui-web-client.md), and
-[ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
+The accepted decisions are [ADR-0001](../adr/0001-feature-oriented-modular-monolith.md),
+[ADR-0002](../adr/0002-postgresql-server-and-sqlite-local-profiles.md),
+[ADR-0003](../adr/0003-react-and-material-ui-web-client.md), and
+[ADR-0004](../adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
 
 ## Exit criteria and review evidence
 
@@ -39,9 +48,9 @@ The accepted decisions are [ADR-0001](adr/0001-feature-oriented-modular-monolith
 | A second workspace cannot read or modify the first Article | Both-provider service tests, persisted two-workspace HTTP tests and relational constraint checks |
 | Documentation and generated migrations match implementation | Living references, empty-to-latest migrations and pending-model-change checks |
 
-The detailed executable mapping and diagnostic allowlist live in [testing](testing.md) and
-[Article contracts](knowledge-contracts.md). The final change must pass `scripts/verify.sh --all`
-locally and in CI. Review all parent criteria before closing issue #5 and the GitHub milestone.
+The detailed executable mapping and diagnostic allowlist live in [testing](../testing.md) and
+[Article contracts](../knowledge-contracts.md). The parent exit criteria above were reviewed against the implementation and passing local/CI
+verification. Closing issue #5 and the GitHub milestone still requires the completing PR to merge.
 
 ## Constraints and exclusions
 
@@ -53,8 +62,7 @@ restoration, MCP, import/export, embeddings, and AI workflows remain later miles
 
 ## Completion and archival
 
-The completing pull request for issue #12 must link this plan, record local and CI verification,
-and review the parent exit criteria. After those criteria pass, add its concrete PR link to the
-completion banner, set this plan to `Completed`, and move it to `docs/archive/`, updating incoming
-links. Keep the broader MVP roadmap in backlog because its later milestones are not delivered.
-The foundation plan is already archived with its original completing PR #3.
+This plan is retained with its verification evidence in the completing PR. Current behavior lives
+in the architecture, schema, local-mode, frontend, testing, and Article contract references.
+The broader MVP roadmap remains in backlog because its later milestones are not delivered.
+The foundation plan is archived separately with its original completing PR #3.
