@@ -1,0 +1,165 @@
+name: Agent-ready work item
+description: Define one delivery, usually one PR, either standalone or as a sub-issue.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for an independently verifiable delivery, usually one PR. For an outcome
+        spanning several deliveries, use Parent outcome. This form also supports standalone work.
+        Keep milestone, type, area labels, priority, ownership, status, and dependencies in GitHub
+        metadata. Text references do not create native parent or dependency relationships.
+        Incomplete proposals may enter Inbox or Backlog; complete readiness checks before Ready.
+
+  - type: dropdown
+    id: work_type
+    attributes:
+      label: Work type
+      description: Apply the matching native type or type:* label after creation; this field does not set metadata.
+      options:
+        - Feature
+        - Bug
+        - Task
+    validations:
+      required: true
+
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent and observable outcome
+      description: What should become true, for whom, and why does it matter?
+      placeholder: |
+        A local user can ...
+
+        This matters because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: parent_outcome
+    attributes:
+      label: Parent outcome and coverage
+      description: Optional for standalone work. Link the parent and criteria this delivery contributes to; also attach it as a native sub-issue.
+      placeholder: |
+        Parent: #123
+        Contributes to: #123/AC-001, #123/AC-002
+        Update the parent's acceptance coverage after this issue is created.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Link the plan, ADRs, contracts, and relevant existing implementation where applicable.
+      placeholder: |
+        - Plan: docs/...
+        - ADR or reference: docs/...
+        - Related implementation or test: src/... or tests/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: State the behavior and artifacts included in this issue.
+      placeholder: |
+        - Add ...
+        - Preserve ...
+        - Cover ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: execution_boundary
+    attributes:
+      label: Execution boundary
+      description: Explain the independently reviewable result of one PR, including the tests and documentation that must ship with it.
+      placeholder: |
+        This PR delivers ... across application, persistence, and HTTP.
+        It can merge after ... and be verified by ...
+        The later UI delivery is excluded because ...
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: Name adjacent behavior deliberately excluded from this issue.
+      placeholder: |
+        - Do not add ...
+        - Defer ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and invariants
+      description: Record only constraints that affect implementation or review.
+      placeholder: |
+        - Architecture and dependency direction:
+        - Workspace authorization and isolation:
+        - Public contract and compatibility:
+        - SQLite/PostgreSQL or migration impact:
+        - Concurrency, cancellation, privacy, or logging:
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Describe verifiable behavior, including relevant failure and authorization cases.
+      placeholder: |
+        - [ ] AC-001: Given ..., when ..., then ...
+        - [ ] AC-002: Invalid input produces ...
+        - [ ] AC-003: Another workspace cannot ...
+        - [ ] AC-004: Existing behavior remains compatible with ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: Map criteria to relevant tests and commands. Include full repository verification before delivery.
+      placeholder: |
+        - AC-001: Unit or component test ...
+        - AC-002, AC-003: SQLite/PostgreSQL and HTTP contract tests ...
+        - Browser or manual evidence, if needed: ...
+        - Focused command: scripts/verify.sh --...
+        - Full verification: scripts/verify.sh --all
+    validations:
+      required: false
+
+  - type: textarea
+    id: documentation
+    attributes:
+      label: Documentation and decision impact
+      description: Identify living documentation, contracts, plans, or ADRs that must change, or explain why none do.
+      placeholder: |
+        - Living documentation: docs/...
+        - Contract or schema documentation: docs/...
+        - ADR required or decision already covered by: ...
+        - Plan lifecycle impact: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: open_questions
+    attributes:
+      label: Open questions and prerequisites
+      description: Record unresolved decisions and candidate blockers. Set confirmed blockers using native dependencies; resolve prerequisites before Ready.
+      placeholder: |
+        - Decision needed: ...
+        - Proposed blocker: #... because ...
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness check
+      description: Optional at creation. Complete before moving to Ready; these checks do not change GitHub status.
+      options:
+        - label: The outcome and acceptance criteria describe behavior rather than prescribing an unnecessary implementation.
+        - label: One PR can deliver the agreed result with its tests and documentation.
+        - label: Prerequisite decisions are resolved and blocking dependencies are satisfied; native relationships are recorded.
+        - label: For a sub-issue, the native parent relationship and parent acceptance coverage are recorded; otherwise this is standalone work.
+        - label: Testing, provider, public-contract, security, and documentation impacts have been considered.

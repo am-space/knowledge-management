@@ -1,6 +1,7 @@
 # Milestone 2 — Reliable local navigation and workspaces
 
 - **Status:** Active
+- **GitHub Milestone:** [Milestone 2 — Reliable local navigation and workspaces](https://github.com/am-space/knowledge-management/milestone/2)
 - **Parent outcome:** [Issue #20](https://github.com/am-space/knowledge-management/issues/20)
 - **Roadmap:** [Knowledge Core MVP](backlog/knowledge-core-mvp-plan.md)
 
