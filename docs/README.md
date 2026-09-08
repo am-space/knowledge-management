@@ -13,7 +13,7 @@ material.
 | [`local-mode.md`](local-mode.md) | SQLite local profile, capabilities, and limitations |
 | [`frontend.md`](frontend.md) | React and Material UI client direction |
 | [`testing.md`](testing.md) | Executable coverage, verification commands, and remaining test boundaries |
-| [`work-tracking.md`](work-tracking.md) | GitHub Issue responsibilities, lifecycle, and relationship to repository plans |
+| [`work-tracking.md`](work-tracking.md) | Milestone organization, parent outcome decomposition, delivery issues, and plan lifecycle |
 
 ## Architecture decision records
 

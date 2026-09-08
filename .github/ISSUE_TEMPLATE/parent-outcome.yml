@@ -1,0 +1,99 @@
+name: Parent outcome
+description: Define a feature or story delivered through several independently mergeable sub-issues.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when an outcome needs several deliveries. For a result that fits in one PR,
+        use Agent-ready work item. Keep milestone, type, labels, ownership, priority, and status in
+        GitHub metadata. Attach children using native sub-issues and record blockers using native
+        dependencies; links in this form do not create those relationships.
+        A parent can be created before decomposition. Complete coverage before approving delivery,
+        and verify the combined outcome before closing it.
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome and value
+      description: Who benefits, what becomes possible, and why does it matter?
+      placeholder: |
+        A local user can ...
+        This matters because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Link the roadmap, plan, accepted decisions, and related outcomes where applicable.
+      placeholder: |
+        - Roadmap: docs/...
+        - Plan: docs/...
+        - ADR or living reference: docs/...
+        - Related outcome: #...
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Name the capabilities included in this outcome.
+      placeholder: |
+        - Users can ...
+        - The system guarantees ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: Name adjacent capabilities deliberately excluded from this outcome.
+      placeholder: |
+        - ... remains deferred.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Define the combined outcome, including relevant failures and isolation. Keep AC identifiers stable when adding children.
+      placeholder: |
+        - [ ] AC-001: A user can ...
+        - [ ] AC-002: Unauthorized access cannot ...
+        - [ ] AC-003: Existing data and clients retain ...
+        - [ ] AC-004: The complete workflow passes ...
+
+  - type: textarea
+    id: decomposition
+    attributes:
+      label: Decomposition constraints and open decisions
+      description: Identify prerequisites, risks, compatibility boundaries, and work that must ship together. Split by verifiable capabilities rather than automatically by layer.
+      placeholder: |
+        - Resolve ... before implementing ...
+        - Keep ... and ... in the same delivery because ...
+        - Preserve ... on SQLite and PostgreSQL.
+        - Open question: ...
+
+  - type: textarea
+    id: coverage
+    attributes:
+      label: Acceptance coverage
+      description: Optional until children exist. Map every parent criterion to delivery issues and evidence, including combined verification; track status through native sub-issues.
+      placeholder: |
+        | Parent criterion | Delivery issues | Expected evidence |
+        | --- | --- | --- |
+        | AC-001 | #... | HTTP and provider tests ... |
+        | AC-002 | #... | Cross-workspace isolation tests ... |
+        | AC-003 | #... | Upgrade and compatibility tests ... |
+        | AC-004 | #... | Browser workflow and full verification ... |
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Readiness for delivery
+      description: Optional at creation. Complete before approving delivery; checked items do not mean the outcome is implemented.
+      options:
+        - label: Scope, exclusions, and verifiable exit criteria are agreed, and the relevant plan is linked.
+        - label: Every acceptance criterion maps to delivery children and expected evidence, including combined verification.
+        - label: Children have coherent PR boundaries, native parent/dependency relationships, and explicit milestone assignments.
+        - label: Prerequisite decisions for the next delivery are resolved; remaining work is explicitly dependency-ordered.
