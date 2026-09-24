@@ -21,6 +21,7 @@ material.
 - [`ADR-0002`](adr/0002-postgresql-server-and-sqlite-local-profiles.md) — PostgreSQL server and SQLite local profiles
 - [`ADR-0003`](adr/0003-react-and-material-ui-web-client.md) — React and Material UI web client
 - [`ADR-0004`](adr/0004-explicit-revision-version-and-trusted-workspace-context.md) — explicit revision version and trusted workspace context
+- [`ADR-0005`](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md) — authorized workspace routes and initial hierarchy provenance (Milestone 2 contract; implementation pending)
 
 Start new decisions from [`adr/template.md`](adr/template.md).
 

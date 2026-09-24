@@ -42,6 +42,12 @@ JoinedAt
 The initial roles are expected to be owner, editor, and viewer. The exact permission matrix remains
 to be specified before authorization is implemented.
 
+The agreed Milestone 2 personal-workspace surface authorizes only `Owner` memberships against the
+trusted actor. It atomically creates a workspace and that membership; `CreatedBy` remains provenance.
+Workspace names are mutable labels with last-committed-rename behavior, not versioned knowledge.
+These operations are not implemented yet; the full hosted role matrix remains deferred. See the
+[Milestone 2 contract](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract).
+
 ## Knowledge
 
 ### KnowledgeNode
@@ -60,6 +66,15 @@ CreatedBy
 The node carries stable identity and current structural state. A node cannot be its own parent;
 hierarchy cycles and cross-workspace parents must be rejected when hierarchy operations ship.
 Milestone 1 has no hierarchy operations: Articles are roots, and `ParentId` remains null.
+
+The accepted Milestone 2 contract permits `ParentId` assignment only at creation. The immutable
+initial parent, node `CreatedBy`, and node `CreatedAt` attribute that structural choice; parent
+assignment commits with revision 1 and the current pointer. Content edits cannot change the parent.
+Existing roots retain their null parent and original provenance. The existing composite parent
+foreign key and self-parent check reinforce workspace and identity constraints; application rules
+also require an eligible existing Article parent. No new schema or hierarchy operation is shipped
+by the contract decision. Future moves require an explicit history design before changing this
+creation-only field. See [ADR-0005](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md).
 
 ### KnowledgeRevision
 
