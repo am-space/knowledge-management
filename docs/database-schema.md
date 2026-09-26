@@ -45,7 +45,7 @@ to be specified before authorization is implemented.
 The agreed Milestone 2 personal-workspace surface authorizes only `Owner` memberships against the
 trusted actor. It atomically creates a workspace and that membership; `CreatedBy` remains provenance.
 Workspace names are mutable labels with last-committed-rename behavior, not versioned knowledge.
-These operations are not implemented yet; the full hosted role matrix remains deferred. See the
+These workspace operations are implemented; the full hosted role matrix remains deferred. See the
 [Milestone 2 contract](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract).
 
 ## Knowledge

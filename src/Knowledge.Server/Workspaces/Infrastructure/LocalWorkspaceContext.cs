@@ -2,7 +2,7 @@ using Knowledge.Server.Workspaces.Features;
 
 namespace Knowledge.Server.Workspaces.Infrastructure;
 
-public sealed class LocalWorkspaceContext : IWorkspaceContext
+public sealed class LocalWorkspaceContext : IWorkspaceContext, ITrustedActorContext
 {
     public static readonly Guid OwnerId = new("01996e76-6d91-74fb-8dd4-f8ce217b6bd5");
 
@@ -11,4 +11,6 @@ public sealed class LocalWorkspaceContext : IWorkspaceContext
     public Guid WorkspaceId => PersonalWorkspaceId;
 
     public Guid ActorId => OwnerId;
+
+    public Guid DefaultWorkspaceId => PersonalWorkspaceId;
 }

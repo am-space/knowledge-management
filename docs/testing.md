@@ -55,10 +55,13 @@ by Git, and uploaded on CI failure. They contain synthetic test data.
 | HTTP success/error shapes, validation, cancellation and denied hosted context | `ArticleEndpointTests` |
 | Content-bearing database failures produce safe logs and generic responses | `ArticleEndpointTests.PersistenceFailure_RedactsLogsAndResponseAndRollsBack`; middleware unit tests |
 | Asynchronous tree/editor races, failed loading retry and browser-storage failures | `src/Knowledge.Web/src/App.test.tsx` |
+| Owner-authorized workspace create/list/get/rename, pagination ties, Viewer/Editor denial, request selection, rollback, and cancellation on both providers | `WorkspaceServiceTests` |
+| Workspace HTTP shapes, validation, error privacy, legacy default compatibility, and denied hosted actor | `WorkspaceEndpointTests` |
 
 Relational constraints reinforce write integrity; they do not replace workspace-filtered reads or
-implement PostgreSQL row-level security. HTTP tests inject a trusted second workspace at the host
-boundary; public requests cannot choose a workspace. This is not hosted authentication coverage.
+implement PostgreSQL row-level security. Legacy Article HTTP tests inject a trusted second workspace
+at the host boundary; legacy requests cannot choose a workspace. This is not hosted authentication
+coverage.
 
 ## Milestone 2 contract review and required coverage
 
@@ -66,9 +69,9 @@ boundary; public requests cannot choose a workspace. This is not hosted authenti
 [new contracts](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract) and
 [browser behavior](frontend.md#milestone-2-navigation-contract-not-yet-implemented).
 The following scenario walkthrough defines expected results for that documentation decision.
-It is not executable evidence that Milestone 2 is implemented. Workspace and Article implementation
-deliveries must add provider/application/HTTP tests; the frontend delivery adds component and browser
-tests. Integrated verification does not replace those feature-level checks.
+Issue #22 now has provider/application/HTTP evidence above. The remaining Article and frontend rows
+are requirements for issues #23 and #24, not executable evidence of their delivery. Integrated
+verification does not replace those feature-level checks.
 
 | #21 criterion / scenario | Required result |
 | --- | --- |

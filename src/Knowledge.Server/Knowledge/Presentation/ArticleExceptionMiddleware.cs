@@ -1,4 +1,5 @@
 using Knowledge.Server.Workspaces.Features;
+using Knowledge.Server.Workspaces.Presentation;
 
 namespace Knowledge.Server.Knowledge.Presentation;
 
@@ -25,12 +26,15 @@ public sealed class ArticleExceptionMiddleware(
                 throw;
             }
 
-            await ArticleProblems.WorkspaceAccessDenied(context).ExecuteAsync(context);
+            var result = context.Request.Path.StartsWithSegments("/api/workspaces")
+                ? WorkspaceProblems.AccessDenied(context)
+                : ArticleProblems.WorkspaceAccessDenied(context);
+            await result.ExecuteAsync(context);
         }
         catch (BadHttpRequestException exception)
         {
             logger.LogInformation(
-                "The Article request body could not be read. TraceId: {TraceId}; ErrorType: {ErrorType}.",
+                "The API request body could not be read. TraceId: {TraceId}; ErrorType: {ErrorType}.",
                 context.TraceIdentifier,
                 exception.GetType().Name);
             if (context.Response.HasStarted)
@@ -54,7 +58,7 @@ public sealed class ArticleExceptionMiddleware(
         {
             // Provider and parser exception messages can contain private content.
             logger.LogError(
-                "An unexpected error occurred while processing an Article request. TraceId: {TraceId}; ErrorType: {ErrorType}.",
+                "An unexpected error occurred while processing an API request. TraceId: {TraceId}; ErrorType: {ErrorType}.",
                 context.TraceIdentifier,
                 exception.GetType().Name);
             if (context.Response.HasStarted)

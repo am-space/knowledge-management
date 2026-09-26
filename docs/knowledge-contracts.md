@@ -1,20 +1,22 @@
 # Knowledge application and HTTP contracts
 
 This page defines shipped Milestone 1 behavior and the agreed Milestone 2 contracts. The sections
-through Compatibility guidance describe the implemented local Article slice. The final
-[Milestone 2 section](#milestone-2-workspaces-and-navigation-contract) specifies implementation
-requirements; its routes and behavior are not available yet.
+through Compatibility guidance describe the implemented local Article slice. In the
+[Milestone 2 section](#milestone-2-workspaces-and-navigation-contract), workspace operations and
+owner-authorized selection are implemented by issue #22. Scoped Article routes, listing, hierarchy,
+and browser navigation remain implementation requirements for issues #23 and #24.
 
 ## Trusted workspace context
 
 Every knowledge operation receives an application-owned `WorkspaceContext` containing the active
 workspace and actor identities. Presentation adapters resolve this context before invoking a
-knowledge use case. Article routes and request bodies do not accept a workspace ID.
+knowledge use case. Legacy Article routes and request bodies do not accept a workspace ID.
 
 In local mode, startup idempotently provisions one configured local owner, that owner's membership,
-and one personal workspace. The local host resolves every request to that owner and workspace. A
-database ID, path, header, query parameter, route value, or request-body value supplied by a client
-must not select or override them. Hosted mode will replace this resolver with authenticated
+and one personal workspace. The local host resolves legacy Article requests to that owner and
+original workspace. A database ID, path, header, query parameter, route value, or request-body value
+supplied by a client must not override that legacy scope. New workspace routes permit owner-authorized
+workspace selection as described below. Hosted mode will replace this resolver with authenticated
 principal and membership resolution without changing knowledge use cases or Article contracts.
 
 Persistence queries and mutations still include the trusted workspace ID. When an Article ID does
@@ -125,16 +127,17 @@ credentials, database details, or exception text.
 
 ## Diagnostic allowlist
 
-Article error logs contain a fixed event message, request trace ID, and exception type name.
+API error logs contain a fixed event message, request trace ID, and exception type name.
 They omit exception objects, messages, stacks, request bodies, titles, and Markdown. EF Core
 sensitive-data logging is disabled, and its save-failure and query-iteration-failure events are
 suppressed because they include raw provider exceptions even when parameter logging is disabled.
-SQL command diagnostics retain parameter placeholders; the Article middleware supplies the safe
+SQL command diagnostics retain parameter placeholders; the API middleware supplies the safe
 correlated error event. The generic `500` body contains only `type`, `title`, `status`, and `traceId`.
 Other problem bodies add only the documented validation fields or current revision version.
 
-These guarantees cover the shipped Article request path. Hosted authentication, future request/body
-logging, and additional diagnostics require their own privacy review before being enabled.
+These guarantees cover the shipped Article and workspace request paths. Hosted authentication,
+future request/body logging, and additional diagnostics require their own privacy review before
+being enabled.
 
 ## Compatibility guidance
 
@@ -153,7 +156,8 @@ decision behind these contracts.
 This contract resolves [issue #21](https://github.com/am-space/knowledge-management/issues/21).
 [ADR-0005](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md) extends the fixed local
 workspace decision to authorized selection on new routes. Existing routes keep their default scope.
-The workspace, listing, and frontend deliveries implement this contract separately.
+Workspace operations and the selection authorization service are shipped. Article listing, scoped
+Article routes, and frontend navigation implement the remaining contract separately.
 
 ### Trusted owner and request selection
 

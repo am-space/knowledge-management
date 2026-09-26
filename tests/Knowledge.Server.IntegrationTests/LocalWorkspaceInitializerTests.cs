@@ -75,6 +75,29 @@ public sealed class LocalWorkspaceInitializerTests
     }
 
     [Fact]
+    public async Task Reinitialization_DoesNotResetRenamedPersonalWorkspace()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var initializer = CreateInitializer();
+        await initializer.InitializeAsync(database.Context, CancellationToken.None);
+        var service = new WorkspaceService(
+            database.Context,
+            new LocalWorkspaceContext(),
+            TimeProvider.System);
+        var renamed = await service.RenameAsync(
+            LocalWorkspaceContext.PersonalWorkspaceId,
+            "Renamed personal workspace");
+        Assert.Equal(WorkspaceResultStatus.Updated, renamed.Status);
+
+        database.Context.ChangeTracker.Clear();
+        await initializer.InitializeAsync(database.Context, CancellationToken.None);
+        Assert.Equal("Renamed personal workspace", await database.Context.Workspaces
+            .Where(workspace => workspace.Id == LocalWorkspaceContext.PersonalWorkspaceId)
+            .Select(workspace => workspace.Name)
+            .SingleAsync());
+    }
+
+    [Fact]
     public void PostgreSqlComposition_RegistersDeniedFallbackWithoutLocalInitializer()
     {
         var configuration = new ConfigurationBuilder()
