@@ -75,7 +75,7 @@ tests. Integrated verification does not replace those feature-level checks.
 | AC-001: Create, list, rename, select owned workspace | Trimmed 1–200-unit name; duplicate names allowed; atomic workspace/owner membership creation; unchanged identity on rename; scoped request selects only an owned workspace |
 | AC-001/002: Missing vs another owner's workspace | Same `404 workspace-not-found`, no identifying data; list includes only owned workspaces; denied trusted actor gives `403` |
 | AC-002: A/B requests interleave under one owner | Each operation uses its own authorized workspace context; no global selection or cross-workspace reads/writes |
-| AC-002: Viewer/editor membership without ownership | Personal-workspace list excludes it; selection/rename return the same `404` as an absent workspace |
+| AC-002: Viewer/editor membership without ownership | Personal-workspace list excludes it; workspace selection/rename and every scoped Article operation return the same `404` as an absent workspace: root/child list, create, get, and update; no Article data is disclosed or changed |
 | AC-003: Existing client after workspace create/rename/select | Legacy routes and Location/response/error shapes unchanged; still target the original default; original IDs and revisions survive upgrade |
 | AC-003: Nested node read/update via legacy default route | Content can be read/updated by ID; parent is unchanged, including when an unknown parent field is sent |
 | AC-004: Root vs child query | Omitted parent lists roots; supplied parent lists only direct children; valid empty parent gives `200` empty page, absent/foreign/inactive/non-Article parent gives identical `404` |

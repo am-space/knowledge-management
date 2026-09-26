@@ -216,7 +216,9 @@ or choosing another default. Explicit owned-workspace operations do not depend o
 `name` is a required non-null string, trimmed using the existing domain whitespace rules, with
 1–200 UTF-16 code units after trimming. Duplicate names are allowed; IDs distinguish workspaces.
 Creation generates a new ID and atomically inserts the workspace and the trusted actor's `Owner`
-membership. Failure or cancellation leaves neither record. No input can assign a different owner.
+membership. A failure or cancellation observed before transaction commit leaves neither record;
+after commit, both records are durable even if the request is canceled or its response is lost.
+No input can assign a different owner.
 Rename preserves ID, `CreatedAt`, `CreatedBy`, and memberships. An identical normalized name is a
 successful no-op. Concurrent renames use the last committed name; workspace names are mutable labels
 and do not create Article revisions or a workspace-name audit history in Milestone 2. Workspace
@@ -337,13 +339,18 @@ clarifies failures for the new surface; existing routes retain their current beh
 | Self-parenting attempted at application boundary | `400`, `urn:knowledge:problem:validation` | `parentId` |
 | Stale content update | `409`, `urn:knowledge:problem:revision-conflict` | Existing `currentRevisionVersion` extension |
 
-The new workspace-not-found problem title is `Workspace not found.` It has no workspace name,
+The workspace-not-found problem title is `Workspace not found.` It has no workspace name,
 owner, membership, or selection details. Existing problem titles remain unchanged. Structurally
 malformed requests can fail validation without a database lookup. For well-formed requests, check
 trusted identity, authorize the requested workspace, then resolve the parent/Article or continuation.
 Thus a missing workspace and another owner's workspace have indistinguishable responses, even when
 an Article or cursor from elsewhere is also supplied. Never return a revision-conflict version from
 outside the authorized workspace.
+
+For workspace list/create, a missing trusted actor uses the same workspace-access-denied status and
+problem type, with the neutral title `A trusted actor is required.` These operations do not require
+an active workspace, so they must not use the legacy active-workspace title. Existing legacy Article
+routes retain their current title and response contract.
 
 Responses expose only the documented workspace, scoped Article, summary, page, and error fields.
 Validation messages describe the rule without echoing names, content, or cursors. Extend the shipped
