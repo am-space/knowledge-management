@@ -3,16 +3,21 @@
 ## System shape
 
 The application is a feature-oriented modular monolith implemented with .NET 10 and ASP.NET Core. It
-exposes the local Article application service through HTTP to a React web client. During development,
+exposes Article and personal workspace application services through HTTP. The React client currently
+uses the Article routes. During development,
 Vite serves the client and proxies HTTP requests. MCP and production client hosting are deferred.
 
 ```mermaid
 flowchart TD
-    Web["React editor and preview"] --> Http["Article HTTP adapter"]
-    Http --> Service["ArticleService"]
-    Context["Trusted workspace context"] --> Service
-    Service --> Domain["Nodes and immutable revisions"]
-    Service --> Persistence["EF Core persistence"]
+    Web["React editor and preview"] --> Http["HTTP adapters"]
+    Http --> ArticleService["ArticleService"]
+    Http --> WorkspaceService["WorkspaceService"]
+    Context["Trusted local actor and default workspace"] --> WorkspaceService
+    Context --> ArticleService
+    WorkspaceService --> Domain["Workspace ownership"]
+    ArticleService --> RevisionDomain["Nodes and immutable revisions"]
+    WorkspaceService --> Persistence["EF Core persistence"]
+    ArticleService --> Persistence
     Persistence --> SQLite["SQLite local profile"]
     Persistence --> PostgreSQL["PostgreSQL provider"]
 ```
@@ -44,10 +49,11 @@ lifecycle of its own.
 
 The same application supports two persistence profiles:
 
-- **Local:** single process, SQLite file, normally one automatically created personal workspace.
+- **Local:** single process, SQLite file, one automatically created personal workspace, and optional
+  additional owned workspaces.
 - **Server:** PostgreSQL persistence is implemented and tested; hosted authentication, multi-user
-  deployment, `pgvector`, and optional `ltree` are planned. Article HTTP calls fail closed with `403`
-  until the host supplies a trusted workspace resolver.
+  deployment, `pgvector`, and optional `ltree` are planned. Article and workspace HTTP calls fail
+  closed with `403` until the host supplies a trusted actor and workspace resolver.
 
 Both profiles preserve stable identifiers, revision behavior, workspace ownership, use cases, and
 Article application contracts, with MCP planned as another adapter. Provider-specific capabilities
@@ -74,4 +80,3 @@ single primary application assembly initially. Module-internal `Domain`, `Featur
 and `Infrastructure` folders should be added as real code requires them rather than as empty layers.
 
 Accepted rationale is recorded in [ADR-0001](adr/0001-feature-oriented-modular-monolith.md).
-

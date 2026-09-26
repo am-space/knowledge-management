@@ -34,6 +34,7 @@ shown in `.env.example`.
 - Start one application process without requiring PostgreSQL or Docker.
 - Store knowledge in one configurable SQLite database file.
 - Automatically create or select a personal workspace.
+- Create, list, inspect, and rename owner-authorized personal workspaces through HTTP.
 - Create, reopen, edit, preview, and save Articles through the web client and HTTP.
 - Preserve immutable revisions and report stale saves as conflicts.
 
@@ -49,10 +50,10 @@ workspace in one transaction after applying SQLite migrations. The owner and wor
 application-defined IDs, so restarting resolves the same records without creating duplicates. A
 startup failure rolls back all provisioning and stops the host with an actionable log message.
 
-The trusted local host exposes the resolved owner and workspace through the application workspace
-context before invoking application behavior. Client-supplied route values, headers, query
-parameters, request bodies, database paths, or IDs cannot override the active workspace. The
-PostgreSQL profile does not register this initializer or local context. Until hosted authentication
+The trusted local host exposes the resolved owner and original personal workspace through the legacy
+Article application context. Client-supplied route values, headers, query parameters, request bodies,
+database paths, or IDs cannot override that legacy scope. The PostgreSQL profile does not register
+this initializer or local context. Until hosted authentication
 provides a trusted identity and membership resolver, it registers a denied workspace context so
 knowledge requests return the documented `403` response instead of selecting an untrusted tenant.
 
@@ -62,35 +63,37 @@ needed by the future authenticated server profile. See
 [Knowledge application and HTTP contracts](knowledge-contracts.md) and
 [ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
 
-## Agreed Milestone 2 workspace behavior (not yet implemented)
+## Milestone 2 workspace behavior
 
 [ADR-0005](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md) adds personal workspace
 management and authorized selection while retaining the bootstrap identities and existing Article
 routes. The [Milestone 2 contract](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract)
-defines the exact routes, shapes, pagination, validation, and errors.
+defines the exact routes, shapes, pagination, validation, and errors. Workspace operations now ship;
+scoped Article routes and browser navigation remain pending.
 
 The trusted local owner may create, list, rename, and select workspaces where they have an `Owner`
 membership. Creation establishes that membership atomically. Workspace names may repeat; stable IDs
 identify them. Rename does not alter identity or bootstrap provenance, and startup must not reset a
 saved rename from configuration. Owner, editor, and viewer role management and sharing are deferred.
 
-The host still supplies actor identity. A workspace ID in a new scoped Article route requests
-selection and must pass application ownership authorization before becoming a workspace context.
-Every request makes its own selection; no global selected-workspace setting, cookie, or client
-identity override is introduced. Missing and unowned explicit selections both return `404` without
-falling back. An unavailable trusted actor still returns `403`. PostgreSQL development hosting
-remains denied; trusted provider test contexts do not imply hosted authentication is implemented.
+The host still supplies actor identity. `GET /api/workspaces/{workspaceId}` validates a selection;
+the application authorization service can then return an immutable context for future scoped Article
+routes. Every request makes its own selection; no global selected-workspace setting, cookie, or
+client identity override is introduced. Missing and unowned explicit selections both return `404`
+without falling back. An unavailable trusted actor still returns `403`. PostgreSQL development
+hosting remains denied; trusted provider test contexts do not imply hosted authentication is
+implemented.
 
-Existing `/api/articles` clients always use the original personal workspace. New browser clients
-use scoped routes and obtain the default ID from the authorized workspace list. Creating or selecting
-another workspace never changes the default for existing clients. A fresh browser chooses that
-default and discovers roots from the server, including pre-upgrade Articles. Nested content is
-reachable through direct-child pages. All pages remain reachable through continuation controls.
+Existing `/api/articles` clients always use the original personal workspace. Creating or selecting
+another workspace never changes their default. The current browser client still uses the legacy
+Article routes. Issue #24 will consume scoped routes from #23 and choose the authorized default ID
+from the workspace list, then discover roots and nested content through server continuation pages.
 
-Optional browser preferences may remember workspace, selected Article, and expansion state. They
-are validated against server responses and are not needed to recover saved content. Clearing storage
-or using another browser does not remove navigation entries from the server. Existing browser ID
-indexes require no data import; new navigation stops using them as a discovery source. See
+Once browser navigation ships, optional browser preferences may remember workspace, selected Article,
+and expansion state. They must be validated against server responses and are not needed to recover
+saved content. Clearing storage or using another browser will not remove navigation entries from the
+server. Existing browser ID indexes require no data import; new navigation stops using them as a
+discovery source. See
 [frontend selection rules](frontend.md#milestone-2-navigation-contract-not-yet-implemented) for stale
 preferences, reload, failure, and draft handling.
 

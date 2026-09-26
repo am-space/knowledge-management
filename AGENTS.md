@@ -5,10 +5,11 @@ This file provides repository-wide guidance to Codex when working in this reposi
 ## Project status
 
 This repository implements the Milestone 1 local Article workflow: personal workspace bootstrap,
-immutable revisions, HTTP operations, and the React Markdown editor and preview. SQLite and
-PostgreSQL have generated migrations and provider tests. Browser verification runs the local
-workflow against SQLite; hosted authentication, hierarchy operations, search, relations, and MCP
-remain future work.
+immutable revisions, HTTP operations, and the React Markdown editor and preview. Milestone 2
+workspace create/list/get/rename and owner-authorized selection are available through HTTP; scoped
+Article navigation and the workspace UI remain pending. SQLite and PostgreSQL have generated
+migrations and provider tests. Browser verification runs the local Article workflow against SQLite;
+hosted authentication, hierarchy operations, search, relations, and MCP remain future work.
 
 Start with [`docs/README.md`](docs/README.md). Accepted decisions live in `docs/adr/`, and living
 reference pages describe the current direction. The root

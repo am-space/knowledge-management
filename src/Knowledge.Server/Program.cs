@@ -1,6 +1,7 @@
 using Knowledge.Server;
 using Knowledge.Server.Infrastructure.Persistence;
 using Knowledge.Server.Knowledge.Presentation;
+using Knowledge.Server.Workspaces.Presentation;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -35,6 +36,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     ResponseWriter = HealthResponseWriter.WriteAsync,
 });
 app.MapArticleEndpoints();
+app.MapWorkspaceEndpoints();
 
 app.Run();
 

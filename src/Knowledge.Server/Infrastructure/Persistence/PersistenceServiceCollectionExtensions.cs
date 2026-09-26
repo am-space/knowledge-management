@@ -41,6 +41,7 @@ public static class PersistenceServiceCollectionExtensions
                 : serviceProvider.GetRequiredService<PostgreSqlKnowledgeDbContext>();
         });
         services.AddScoped<ArticleService>();
+        services.AddScoped<WorkspaceService>();
         services.AddSingleton(TimeProvider.System);
 
         var providerName = configuration[$"{PersistenceOptions.SectionName}:Provider"]
@@ -51,12 +52,16 @@ public static class PersistenceServiceCollectionExtensions
                 .Bind(configuration.GetSection(LocalWorkspaceOptions.SectionName))
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
-            services.AddScoped<IWorkspaceContext, LocalWorkspaceContext>();
+            services.AddScoped<LocalWorkspaceContext>();
+            services.AddScoped<IWorkspaceContext>(provider => provider.GetRequiredService<LocalWorkspaceContext>());
+            services.AddScoped<ITrustedActorContext>(provider => provider.GetRequiredService<LocalWorkspaceContext>());
             services.AddHostedService<LocalWorkspaceInitializer>();
         }
         else
         {
-            services.AddScoped<IWorkspaceContext, UnavailableWorkspaceContext>();
+            services.AddScoped<UnavailableWorkspaceContext>();
+            services.AddScoped<IWorkspaceContext>(provider => provider.GetRequiredService<UnavailableWorkspaceContext>());
+            services.AddScoped<ITrustedActorContext>(provider => provider.GetRequiredService<UnavailableWorkspaceContext>());
         }
 
         return services;
