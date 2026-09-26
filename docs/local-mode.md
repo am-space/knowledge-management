@@ -42,7 +42,7 @@ with `npm run dev --prefix src/Knowledge.Web`; the server does not host its prod
 The tree is a browser-local index of Article IDs, not a server collection. Clearing browser storage
 removes navigation entries without deleting server content; see [frontend](frontend.md).
 
-## Local identity and workspace resolution
+## Shipped local identity and workspace resolution
 
 Startup idempotently provisions one configured local owner, an owner membership, and one personal
 workspace in one transaction after applying SQLite migrations. The owner and workspace use stable
@@ -61,6 +61,43 @@ local shortcut at the host boundary and preserves the same application and persi
 needed by the future authenticated server profile. See
 [Knowledge application and HTTP contracts](knowledge-contracts.md) and
 [ADR-0004](adr/0004-explicit-revision-version-and-trusted-workspace-context.md).
+
+## Agreed Milestone 2 workspace behavior (not yet implemented)
+
+[ADR-0005](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md) adds personal workspace
+management and authorized selection while retaining the bootstrap identities and existing Article
+routes. The [Milestone 2 contract](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract)
+defines the exact routes, shapes, pagination, validation, and errors.
+
+The trusted local owner may create, list, rename, and select workspaces where they have an `Owner`
+membership. Creation establishes that membership atomically. Workspace names may repeat; stable IDs
+identify them. Rename does not alter identity or bootstrap provenance, and startup must not reset a
+saved rename from configuration. Owner, editor, and viewer role management and sharing are deferred.
+
+The host still supplies actor identity. A workspace ID in a new scoped Article route requests
+selection and must pass application ownership authorization before becoming a workspace context.
+Every request makes its own selection; no global selected-workspace setting, cookie, or client
+identity override is introduced. Missing and unowned explicit selections both return `404` without
+falling back. An unavailable trusted actor still returns `403`. PostgreSQL development hosting
+remains denied; trusted provider test contexts do not imply hosted authentication is implemented.
+
+Existing `/api/articles` clients always use the original personal workspace. New browser clients
+use scoped routes and obtain the default ID from the authorized workspace list. Creating or selecting
+another workspace never changes the default for existing clients. A fresh browser chooses that
+default and discovers roots from the server, including pre-upgrade Articles. Nested content is
+reachable through direct-child pages. All pages remain reachable through continuation controls.
+
+Optional browser preferences may remember workspace, selected Article, and expansion state. They
+are validated against server responses and are not needed to recover saved content. Clearing storage
+or using another browser does not remove navigation entries from the server. Existing browser ID
+indexes require no data import; new navigation stops using them as a discovery source. See
+[frontend selection rules](frontend.md#milestone-2-navigation-contract-not-yet-implemented) for stale
+preferences, reload, failure, and draft handling.
+
+Upgrade retains the original owner, workspace, memberships, Article IDs, null root parents, revision
+history, and current pointers. It does not reconstruct data from browser storage. Any required
+migration is generated and tested on both providers. The local profile remains single-process and
+personal; more owned workspaces do not introduce independent authenticated users.
 
 ## Preserved semantics
 

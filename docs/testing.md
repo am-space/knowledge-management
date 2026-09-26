@@ -60,6 +60,43 @@ Relational constraints reinforce write integrity; they do not replace workspace-
 implement PostgreSQL row-level security. HTTP tests inject a trusted second workspace at the host
 boundary; public requests cannot choose a workspace. This is not hosted authentication coverage.
 
+## Milestone 2 contract review and required coverage
+
+[Issue #21](https://github.com/am-space/knowledge-management/issues/21) specifies the
+[new contracts](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract) and
+[browser behavior](frontend.md#milestone-2-navigation-contract-not-yet-implemented).
+The following scenario walkthrough defines expected results for that documentation decision.
+It is not executable evidence that Milestone 2 is implemented. Workspace and Article implementation
+deliveries must add provider/application/HTTP tests; the frontend delivery adds component and browser
+tests. Integrated verification does not replace those feature-level checks.
+
+| #21 criterion / scenario | Required result |
+| --- | --- |
+| AC-001: Create, list, rename, select owned workspace | Trimmed 1–200-unit name; duplicate names allowed; atomic workspace/owner membership creation; unchanged identity on rename; scoped request selects only an owned workspace |
+| AC-001/002: Missing vs another owner's workspace | Same `404 workspace-not-found`, no identifying data; list includes only owned workspaces; denied trusted actor gives `403` |
+| AC-002: A/B requests interleave under one owner | Each operation uses its own authorized workspace context; no global selection or cross-workspace reads/writes |
+| AC-002: Viewer/editor membership without ownership | Personal-workspace list excludes it; workspace selection/rename and every scoped Article operation return the same `404` as an absent workspace: root/child list, create, get, and update; no Article data is disclosed or changed |
+| AC-003: Existing client after workspace create/rename/select | Legacy routes and Location/response/error shapes unchanged; still target the original default; original IDs and revisions survive upgrade |
+| AC-003: Nested node read/update via legacy default route | Content can be read/updated by ID; parent is unchanged, including when an unknown parent field is sent |
+| AC-004: Root vs child query | Omitted parent lists roots; supplied parent lists only direct children; valid empty parent gives `200` empty page, absent/foreign/inactive/non-Article parent gives identical `404` |
+| AC-004: More than 100 items, equal timestamps, rename/title edit | Each page is bounded; canonical ID breaks time ties identically on both providers; following cursors reaches all items exactly once without mutation; edits do not change order |
+| AC-004: Invalid/mismatched cursor or concurrent insertion | Invalid token/scope/page size gives field-specific `400` after authorization; reauthorize every page; live-read insertion behavior matches contract and refresh reveals earlier inserts |
+| AC-004: Cross-workspace node/cursor/child indicator | No foreign summary, title, revision version, or `hasChildren` information is returned; request authorization and explicit query scope cannot be replaced by token state |
+| AC-005: Root/child create and invalid parent | Null/omitted parent creates root; eligible parent commits with node/revision 1/pointer; invalid syntax is `400`, absent/foreign/ineligible parent is `404`; failure leaves no partial writes |
+| AC-005: Self-parent and attempted reparent | Domain rejects self-parent; both-provider constraints reject self/cross-workspace edges; scoped update rejects parent input without a content write; legacy updates cannot mutate it |
+| AC-005: Provenance and upgrades | Initial parent is attributed by immutable node creator/time; later revisions retain it; old roots keep null parents and original revision history |
+| AC-006: Fresh browser or cleared/unavailable storage | Authorized default loads; all existing roots/children and workspace pages are reachable without stored IDs; nested Articles can be reopened after reload |
+| AC-006: Stale preference or destination load failure | Explicit unavailable workspace never silently falls back; show retry or explicit selection action; failed navigation preserves prior selection/draft |
+| AC-006: Dirty draft, failed/conflicting save, A → B → A | Cancel preserves exact draft and scope; saves cannot retarget; obsolete callbacks cannot update the active editor/tree, even after returning to A |
+| AC-007: Durable decision and references | ADR-0005 extends new-route selection while ADR-0004 remains unchanged; contracts, local-mode, frontend, schema guidance, and index agree on implemented vs pending behavior |
+
+Exact HTTP tests must assert success fields, null/omitted distinctions, canonical IDs, scoped
+Location values, Problem Details types and extensions, and error privacy. Both-provider tests must
+cover persisted ownership, foreign-workspace rejection, rollback, cursor ties, parent constraints,
+and upgrade data preservation. Hosted PostgreSQL requests remain denied without a trusted context.
+Chromium must verify fresh/cleared-storage discovery, pagination, nested creation/reload, workspace
+selection, and draft protection through real HTTP and SQLite.
+
 ## Test boundaries
 
 .NET test projects live under `tests/`. Frontend component tests live beside their React source.

@@ -17,7 +17,14 @@ trusted local owner. Existing Articles and the bootstrapped personal workspace r
 
 ## Sequencing and contract decisions
 
-Specify workspace selection and authorization before implementing workspace operations. A selected
+The accepted [Milestone 2 contract](knowledge-contracts.md#milestone-2-workspaces-and-navigation-contract)
+and [ADR-0005](adr/0005-authorized-workspace-routes-and-initial-hierarchy.md) define new scoped routes,
+owner-authorized selection, bounded listing, and initial parent provenance. These are implementation
+requirements, not shipped behavior. [Frontend guidance](frontend.md#milestone-2-navigation-contract-not-yet-implemented)
+defines selection, reload, and draft safety; [testing guidance](testing.md#milestone-2-contract-review-and-required-coverage)
+maps the contract scenarios to expected outcomes.
+
+Resolve workspace selection and authorization before implementing workspace operations. A selected
 workspace identifier is only a request to access a workspace: authorize it against the trusted owner
 at the application boundary and scope persistence queries explicitly. Define request isolation,
 default selection, stale/missing workspace behavior, and compatibility with existing Article routes.
